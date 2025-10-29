@@ -225,6 +225,13 @@ def me(request: Request):
     except Exception:
         return {"error": "Token inválido o expirado"}
 
+#Logout
+@app.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"mensaje": "Sesión cerrada"}
+
 
 #Clase Torneo
 class Torneo(BaseModel):
@@ -391,7 +398,6 @@ def inscribir_usuario(datos: dict):
         else:
             id_equipo = equipo["idEquipo"]
 
-        # 3. Registrar inscripción
         cursor.execute("""
             INSERT INTO Equipo_Torneo (idEquipo, idTorneo)
             VALUES (%s, %s);

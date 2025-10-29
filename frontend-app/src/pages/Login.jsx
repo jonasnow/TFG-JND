@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
     const navigate = useNavigate();
+    const { setUser } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -12,6 +14,13 @@ export default function Login() {
         e.preventDefault();
         const result = await loginUser(email, password);
         if (result.ok) {
+            const meRes = await fetch("http://localhost:8000/me", {
+                credentials: "include",
+            });
+            const meData = await meRes.json();
+            if (!meData.error) {
+                setUser({ nombre: meData.usuario, email: meData.email });
+            }
             navigate("/");
         } else {
             setError(result.error || "Error al iniciar sesión");
@@ -26,14 +35,10 @@ export default function Login() {
             >
                 <h2 className="text-2xl font-bold mb-6 text-center">Iniciar sesión</h2>
                 {error && (
-                    <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">
-                        {error}
-                    </div>)
-                }
+                    <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">{error}</div>
+                )}
                 <div className="mb-4">
-                    <label className="block text-gray-700 mb-2">
-                        Correo electrónico
-                    </label>
+                    <label className="block text-gray-700 mb-2">Correo electrónico</label>
                     <input
                         type="email"
                         value={email}
