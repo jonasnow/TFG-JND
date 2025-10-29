@@ -1,0 +1,18 @@
+/* src/index.css */
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-100 text-gray-800 font-sans;
+}
+
+a {
+  @apply no-underline;
+}
+
+button {
+  @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition;
+}

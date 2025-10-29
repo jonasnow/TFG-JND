@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crear Torneo</title>
+</head>
+
+<body>
+    <h2>Crear nuevo torneo</h2>
+
+    <form id="torneoForm">
+        <label>Nombre:</label>
+        <input type="text" id="nombre" required><br><br>
+
+        <label>Descripción:</label>
+        <textarea id="descripcion" required></textarea><br><br>
+
+        <label>Precio de inscripción (€):</label>
+        <input type="number" id="precioInscripcion" step="0.01" min="0" required><br><br>
+
+        <label>Número de rondas:</label>
+        <input type="number" id="numeroRondas" min="1" required><br><br>
+
+        <label>Duración de rondas (minutos):</label>
+        <input type="number" id="duracionRondas" min="1" required><br><br>
+
+        <label>Fecha y hora de inicio:</label>
+        <input type="datetime-local" id="fechaHoraInicio" required><br><br>
+
+        <label>Lugar de celebración:</label>
+        <input type="text" id="lugarCelebracion" required><br><br>
+
+        <label>Organizador:</label>
+        <select id="idOrganizador" required></select><br><br>
+
+        <label>Formato de torneo:</label>
+        <select id="idFormatoTorneo" required></select><br><br>
+
+        <label>Juego:</label>
+        <select id="idJuego" required></select><br><br>
+
+        <label>Formato de juego:</label>
+        <select id="idFormatoJuego" required></select><br><br>
+
+        <label>Liga (opcional):</label>
+        <select id="idLiga">
+            <option value="">Ninguna liga</option>
+        </select><br><br>
+
+        <label>Premios:</label>
+        <textarea id="premios"></textarea><br><br>
+
+        <button type="submit">Crear torneo</button>
+    </form>
+
+    <p id="resultado"></p>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+
+        const endpoints = {
+            usuarios: `${API_BASE}/usuarios`,
+            formatosTorneo: `${API_BASE}/formatos_torneo`,
+            juegos: `${API_BASE}/juegos`,
+            formatosJuego: `${API_BASE}/formatos_juego`,
+            ligas: `${API_BASE}/ligas`
+        };
+
+        async function cargarDesplegable(idSelect, url, esUsuario = false) {
+            const select = document.getElementById(idSelect);
+            const response = await fetch(url);
+            const data = await response.json();
+
+            data.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.idUsuario || item.idFormatoTorneo || item.idJuego || item.idFormatoJuego || item.idLiga;
+
+                if (esUsuario) {
+                    option.text = `${item.nombre} ${item.apellidos}`;
+                } else {
+                    option.text = item.nombre;
+                }
+
+                select.add(option);
+            });
+        }
+
+        cargarDesplegable("idOrganizador", endpoints.usuarios, true);
+        cargarDesplegable("idFormatoTorneo", endpoints.formatosTorneo);
+        cargarDesplegable("idJuego", endpoints.juegos);
+        cargarDesplegable("idFormatoJuego", endpoints.formatosJuego);
+        cargarDesplegable("idLiga", endpoints.ligas);
+
+        const form = document.getElementById("torneoForm");
+        const resultado = document.getElementById("resultado");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre: document.getElementById("nombre").value,
+                descripcion: document.getElementById("descripcion").value,
+                precioInscripcion: parseFloat(document.getElementById("precioInscripcion").value),
+                numeroRondas: parseInt(document.getElementById("numeroRondas").value),
+                duracionRondas: parseInt(document.getElementById("duracionRondas").value),
+                fechaHoraInicio: document.getElementById("fechaHoraInicio").value,
+                lugarCelebracion: document.getElementById("lugarCelebracion").value,
+                idOrganizador: parseInt(document.getElementById("idOrganizador").value),
+                idFormatoTorneo: parseInt(document.getElementById("idFormatoTorneo").value),
+                idJuego: parseInt(document.getElementById("idJuego").value),
+                idFormatoJuego: parseInt(document.getElementById("idFormatoJuego").value),
+                idLiga: document.getElementById("idLiga").value ? parseInt(document.getElementById("idLiga").value) : null,
+                premios: document.getElementById("premios").value,
+                estado: "PLANIFICADO"
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/torneo`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+                const res = await response.json();
+                resultado.textContent = res.mensaje || res.error;
+            } catch (err) {
+                resultado.textContent = "Error: " + err;
+            }
+        });
+    </script>
+</body>
+
+</html>

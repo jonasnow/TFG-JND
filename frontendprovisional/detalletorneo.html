@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title id="tituloPagina">Detalles del torneo</title>
+</head>
+<body>
+  <div id="torneoDetalles"></div>
+  <button id="btnInscribirse">Inscribirse</button>
+  <p id="resultado"></p>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+    const params = new URLSearchParams(window.location.search);
+    const idTorneo = params.get("id");
+
+    async function cargarDetalles() {
+      const response = await fetch(`${API_BASE}/torneo/${idTorneo}`);
+      const torneo = await response.json();
+
+      document.getElementById("tituloPagina").textContent = torneo.nombre;
+
+      const contenedor = document.getElementById("torneoDetalles");
+      contenedor.innerHTML = `
+        <h2>${torneo.nombre}</h2>
+        <p><strong>Descripción:</strong> ${torneo.descripcion}</p>
+        <p><strong>Lugar:</strong> ${torneo.lugarCelebracion}</p>
+        <p><strong>Inicio:</strong> ${torneo.fechaHoraInicio}</p>
+        <p><strong>Precio:</strong> ${torneo.precioInscripcion} €</p>
+        <p><strong>Premios:</strong> ${torneo.premios}</p>
+        <p><strong>Liga:</strong> ${torneo.nombreLiga}</p>
+      `;
+    }
+
+    async function inscribirse() {
+      const email = prompt("Introduce tu email para inscribirte:");
+      if (!email) return;
+
+      const response = await fetch(`${API_BASE}/inscribir_usuario`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, idTorneo: parseInt(idTorneo) })
+      });
+      const res = await response.json();
+      document.getElementById("resultado").textContent = res.mensaje || res.error;
+    }
+
+    document.getElementById("btnInscribirse").addEventListener("click", inscribirse);
+
+    cargarDetalles();
+  </script>
+</body>
+</html>

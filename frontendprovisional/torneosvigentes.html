@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Torneos vigentes</title>
+</head>
+<body>
+  <h2>Torneos disponibles</h2>
+  <div id="listaTorneos"></div>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+
+    async function cargarTorneos() {
+      const contenedor = document.getElementById("listaTorneos");
+      const response = await fetch(`${API_BASE}/torneos_vigentes`);
+      const torneos = await response.json();
+
+      if (torneos.length === 0) {
+        contenedor.innerHTML = "<p>No existen torneos disponibles. Prueba más adelante.</p>";
+        return;
+      }
+
+      torneos.forEach(t => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <h3>${t.nombre}</h3>
+          <p>${t.descripcion}</p>
+          <p><strong>Lugar:</strong> ${t.lugarCelebracion}</p>
+          <button onclick="verMas(${t.idTorneo})">Ver más</button>
+          <hr>
+        `;
+        contenedor.appendChild(div);
+      });
+    }
+
+    function verMas(idTorneo) {
+      window.location.href = `detalletorneo.html?id=${idTorneo}`;
+    }
+
+    cargarTorneos();
+  </script>
+</body>
+</html>
