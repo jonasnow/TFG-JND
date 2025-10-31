@@ -1,12 +1,21 @@
-/* src/index.css */
+@font-face {
+  font-family: Play;
+  src: url('../src/assets/fonts/Play-Regular.ttf');
+  /*Si luego no carga, @/assets/fonts/Play-Regular.ttf o new URL('./assets/fonts/Play-Regular.ttf', import.meta.url) */
+  font-weight: 400;
+  font-style: normal;
+}
 @import "tailwindcss";
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@theme{
+  --font-play: Play, "sans-serif";
+}
+
 body {
-  @apply bg-gray-100 text-gray-800 font-sans;
+  @apply bg-gray-100 text-gray-800 font-mono;
 }
 
 a {
@@ -14,5 +23,5 @@ a {
 }
 
 button {
-  @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition;
+  @apply font-play bg-green-500 text-white px-4 py-2 rounded hover:bg-red-700 transition;
 }

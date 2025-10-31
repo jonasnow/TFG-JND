@@ -1,27 +1,49 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     nombre: "",
     apellidos: "",
     localidad: "",
     email: "",
     password: "",
+    confirmPassword: "",
     telefono: "",
   });
 
   const [resultado, setResultado] = useState("");
+  const [exito, setExito] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    if (e.target.name === "email") setEmailError("");
+    if (e.target.name === "password" || e.target.name === "confirmPassword") setPasswordError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setEmailError("Por favor, introduce un correo electrónico válido.");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordError("Las contraseñas no coinciden.");
+      return;
+    }
+
     setResultado("Enviando...");
+    setIsLoading(true);
 
     try {
       const response = await fetch("http://localhost:8000/usuario", {
@@ -31,11 +53,27 @@ export default function Register() {
       });
 
       const result = await response.json();
-      setResultado(JSON.stringify(result, null, 2));
+
+      if (response.ok && !result.error) {
+        setResultado("Registrado con éxito.");
+        setExito(true);
+
+        setTimeout(() => {
+          setIsLoading(false);
+          navigate("/login");
+        }, 2000);
+      } else {
+        setResultado(result.error || "Error al crear usuario");
+        setExito(false);
+      }
     } catch (error) {
       setResultado("Error: " + error.message);
+      setExito(false);
+      setIsLoading(false);
     }
   };
+
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
@@ -87,8 +125,12 @@ export default function Register() {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${emailError ? "border-red-500" : "border-gray-300"
+                }`}
             />
+            {emailError && (
+              <p className="text-red-500 text-sm mt-1">{emailError}</p>
+            )}
           </div>
 
           <div>
@@ -104,6 +146,24 @@ export default function Register() {
           </div>
 
           <div>
+            <label className="block text-gray-700 mb-1">
+              Confirmar contraseña
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${passwordError ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            {passwordError && (
+              <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-gray-700 mb-1">Teléfono</label>
             <input
               type="text"
@@ -113,13 +173,15 @@ export default function Register() {
               className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
-
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+            disabled={isLoading}
+            className={`w-full py-2 rounded-lg text-white transition 
+              ${isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
           >
-            Registrarse
+            {isLoading ? "Registrando..." : "Registrarse"}
           </button>
+
         </form>
 
         {resultado && (

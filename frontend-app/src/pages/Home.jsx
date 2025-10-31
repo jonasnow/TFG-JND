@@ -17,15 +17,15 @@ export default function Home() {
                 <div className="space-x-4">
                     <button
                         onClick={() => navigate("/login")}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        Inicia sesión
+                        class="relative h-12 overflow-hidden rounded bg-neutral-950 px-5 py-2.5 text-white transition-all duration-300 hover:bg-neutral-800 hover:ring-2 hover:ring-neutral-800 hover:ring-offset-2">
+                        <span class="relative">
+                            Iniciar sesión</span>
                     </button>
                     <button
                         onClick={() => navigate("/register")}
-                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                        Crear cuenta
+                        class="relative h-12 overflow-hidden rounded bg-neutral-950 px-5 py-2.5 text-white transition-all duration-300 hover:bg-neutral-800 hover:ring-2 hover:ring-neutral-800 hover:ring-offset-2">
+                        <span class="relative">
+                            Crear cuenta</span>
                     </button>
                 </div>
             )}

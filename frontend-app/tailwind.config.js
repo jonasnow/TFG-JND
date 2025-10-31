@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,jsx,ts,tsx}" 
+    "./src/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
     extend: {
@@ -11,8 +11,9 @@ module.exports = {
         secondary: "#2563EB"
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui"]
-      }
+        sans: ["Inter", "ui-sans-serif", "system-ui"],
+        play: ["Play", "sans-serif"],
+      },
     },
   },
   plugins: [],
