@@ -111,6 +111,14 @@ def crear_usuario(usuario: Usuario):
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (usuario.nombre, usuario.apellidos, usuario.localidad, usuario.email, password_hash, usuario.telefono))
         conn.commit()
+        cursor.execute("INSERT INTO Equipo (nombre) VALUES (%s);", (f"{usuario.nombre} {usuario.apellidos}",))
+        conn.commit()
+        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s;", (usuario.email,))
+        id_usuario = cursor.fetchone()[0]
+        cursor.execute("SELECT idEquipo FROM Equipo WHERE nombre = %s;", (f"{usuario.nombre} {usuario.apellidos}",))
+        id_equipo = cursor.fetchone()[0]
+        cursor.execute("INSERT INTO Usuario_Equipo (idUsuario, idEquipo) VALUES (%s, %s)", (id_usuario, id_equipo))
+        conn.commit()
         return {"mensaje": f"Usuario {usuario.nombre} creado correctamente"}
 
     except mysql.connector.IntegrityError as e:
@@ -381,33 +389,18 @@ def inscribir_usuario(datos: dict):
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
-
-        cursor.execute("SELECT idUsuario, nombre, apellidos FROM Usuario WHERE email = %s;", (email,))
-        usuario = cursor.fetchone()
-        if not usuario:
-            return {"error": "Usuario no encontrado"}
-
-        nombre_equipo = f"{usuario['nombre']} {usuario['apellidos']}"
-        
-        cursor.execute("SELECT idEquipo FROM Equipo WHERE nombre = %s;", (nombre_equipo,))
+        cursor.execute("SELECT equipo.idEquipo FROM Equipo equipo JOIN Usuario usuario ON equipo.nombre = CONCAT(usuario.nombre, ' ', usuario.apellidos) WHERE usuario.email = %s;", (email,))
         equipo = cursor.fetchone()
         if not equipo:
-            cursor.execute("INSERT INTO Equipo (nombre, idCapitan) VALUES (%s, %s);", (nombre_equipo, usuario["idUsuario"]))
-            conn.commit()
-            id_equipo = cursor.lastrowid
-        else:
-            id_equipo = equipo["idEquipo"]
-
-        cursor.execute("""
-            INSERT INTO Equipo_Torneo (idEquipo, idTorneo)
-            VALUES (%s, %s);
-        """, (id_equipo, id_torneo))
+            return {"error": "Usuario no encontrado"}
+        #Como el par idEquipo, idTorneo son clave primaria compuesta, si ya existe la inscripción saltará excepción
+        cursor.execute("INSERT INTO Equipo_Torneo (idEquipo, idTorneo) VALUES (%s, %s);", (equipo['idEquipo'], id_torneo))
         conn.commit()
-
-        return {"mensaje": f"Usuario '{usuario['nombre']}' inscrito correctamente en el torneo."}
-
+        
+        return {"mensaje": "Inscrito correctamente en el torneo."}
+    
     except mysql.connector.IntegrityError:
-        return {"error": "El usuario ya está inscrito en este torneo."}
+        return {"error": "El usuario ya estaba inscrito en este torneo."}
     except Exception as e:
         return {"error": str(e)}
     finally:

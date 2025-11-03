@@ -165,7 +165,6 @@ INSERT INTO `Equipo_Enfrentamiento` (`idEquipo`, `idEnfrentamiento`) VALUES
 --
 
 CREATE TABLE `Equipo_Torneo` (
-  `idEquipoTorneo` int NOT NULL,
   `idEquipo` int NOT NULL,
   `idTorneo` int NOT NULL,
   `posicion` int DEFAULT NULL,
@@ -178,23 +177,23 @@ CREATE TABLE `Equipo_Torneo` (
 -- Volcado de datos para la tabla `Equipo_Torneo`
 --
 
-INSERT INTO `Equipo_Torneo` (`idEquipoTorneo`, `idEquipo`, `idTorneo`, `posicion`, `puntosAcumulados`, `confirmacionAsistencia`, `confirmacionInscripcion`) VALUES
-(1, 1, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(2, 2, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(3, 3, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(4, 4, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(5, 5, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(6, 6, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(7, 7, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(8, 8, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(9, 1, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(10, 2, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(11, 3, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(12, 4, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(13, 5, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(14, 6, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(15, 7, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
-(16, 8, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA');
+INSERT INTO `Equipo_Torneo` (`idEquipo`, `idTorneo`, `posicion`, `puntosAcumulados`, `confirmacionAsistencia`, `confirmacionInscripcion`) VALUES
+(1, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(2, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(3, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(4, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(5, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(6, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(7, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(8, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(1, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(2, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(3, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(4, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(5, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(6, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(7, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA'),
+(8, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA');
 
 -- --------------------------------------------------------
 
@@ -402,7 +401,7 @@ ALTER TABLE `Equipo_Enfrentamiento`
 -- Indices de la tabla `Equipo_Torneo`
 --
 ALTER TABLE `Equipo_Torneo`
-  ADD PRIMARY KEY (`idEquipoTorneo`),
+  ADD PRIMARY KEY (`idEquipo`, `idTorneo`),
   ADD KEY `idEquipo` (`idEquipo`),
   ADD KEY `idTorneo` (`idTorneo`);
 
@@ -473,12 +472,6 @@ ALTER TABLE `Enfrentamiento`
 --
 ALTER TABLE `Equipo`
   MODIFY `idEquipo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
-
---
--- AUTO_INCREMENT de la tabla `Equipo_Torneo`
---
-ALTER TABLE `Equipo_Torneo`
-  MODIFY `idEquipoTorneo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT de la tabla `FormatoJuego`
