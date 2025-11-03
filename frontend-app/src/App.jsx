@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Torneos from './pages/Torneos';
 import Perfil from './pages/Perfil';
 import Register from './pages/Register';
+import TorneoDetalle from './pages/TorneoDetalle';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/torneos" element={<Layout><Torneos /></Layout>} />
+        <Route path="/torneo/:id" element={<Layout><TorneoDetalle /></Layout>} />
         <Route path="/perfil" element={<Layout><Perfil /></Layout>} />
         <Route path="/register" element={<Register />} />
       </Routes>
