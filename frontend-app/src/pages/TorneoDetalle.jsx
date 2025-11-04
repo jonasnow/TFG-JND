@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function TorneoDetalle() {
-    const { id } = useParams();
+    const { slug } = useParams();
     const navigate = useNavigate();
     const [torneo, setTorneo] = useState(null);
     const [usuario, setUsuario] = useState(null);
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
     const [mensaje, setMensaje] = useState("");
     const [error, setError] = useState(null);
-
+    const id = slug ? Number(slug.split("-").pop()) : null;
     useEffect(() => {
         const fetchTorneo = async () => {
             try {

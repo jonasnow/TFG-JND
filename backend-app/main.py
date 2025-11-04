@@ -406,3 +406,45 @@ def inscribir_usuario(datos: dict):
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
+
+#Ver torneos en los que está inscrito un usuario
+@app.get("/torneos_usuario/{email}")
+def torneos_usuario(email: str):
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""SELECT 
+            t.idTorneo AS idTorneo,
+            t.nombre AS Nombre,
+            j.nombre AS Juego,
+            fj.nombre AS FormatoJuego,
+            ft.nombre AS FormatoTorneo,
+            t.descripcion AS Descripcion,
+            t.precioInscripcion AS Precio,
+            t.numeroRondas AS Rondas,
+            t.duracionRondas AS DuracionRondas,
+            t.fechaHoraInicio AS FechaHoraInicio,
+            t.lugarCelebracion AS LugarCelebracion,
+            t.estado AS Estado,
+            t.premios AS Premios
+            FROM Torneo t
+            INNER JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
+            INNER JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
+            INNER JOIN Juego j ON t.idJuego = j.idJuego
+            INNER JOIN Equipo_Torneo et ON t.idTorneo = et.idTorneo
+            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
+            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
+            INNER JOIN Usuario u ON ue.idUsuario = u.idUsuario
+            WHERE t.estado <> 'FINALIZADO'
+              AND t.fechaHoraInicio > NOW()
+              AND u.email = %s
+            ORDER BY t.fechaHoraInicio ASC;""", (email,))
+        torneos = cursor.fetchall()
+        return torneos
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+            

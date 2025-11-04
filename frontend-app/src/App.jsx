@@ -15,7 +15,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/torneos" element={<Layout><Torneos /></Layout>} />
-        <Route path="/torneo/:id" element={<Layout><TorneoDetalle /></Layout>} />
+        <Route path="/torneo/:slug" element={<Layout><TorneoDetalle /></Layout>} />
         <Route path="/perfil" element={<Layout><Perfil /></Layout>} />
         <Route path="/register" element={<Register />} />
       </Routes>
