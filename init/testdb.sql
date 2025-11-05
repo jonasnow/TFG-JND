@@ -295,6 +295,7 @@ CREATE TABLE `Torneo` (
   `duracionRondas` int NOT NULL,
   `fechaHoraInicio` datetime NOT NULL,
   `lugarCelebracion` varchar(150) NOT NULL,
+  `plazasMax` int NOT NULL,
   `estado` enum('PLANIFICADO','EN_CURSO','FINALIZADO','CANCELADO') NOT NULL,
   `premios` text,
   `idFormatoTorneo` int DEFAULT NULL,
@@ -306,9 +307,19 @@ CREATE TABLE `Torneo` (
 -- Volcado de datos para la tabla `Torneo`
 --
 
-INSERT INTO `Torneo` (`idTorneo`, `idOrganizador`, `idLiga`, `nombre`, `descripcion`, `precioInscripcion`, `numeroRondas`, `duracionRondas`, `fechaHoraInicio`, `lugarCelebracion`, `estado`, `premios`, `idFormatoTorneo`, `idJuego`, `idFormatoJuego`) VALUES
-(1, 1, 1, 'Torneo Draft Julio', 'Torneo de Magic formato Draft', 10, 3, 50, '2025-07-05 10:00:00', 'Tienda Planeswalker Madrid', 'FINALIZADO', '3 sobres de premio', 1, 1, 2),
-(2, 1, 1, 'Torneo Standard Julio', 'Torneo de Magic formato Standard', 10, 3, 50, '2025-07-19 10:00:00', 'Tienda Planeswalker Madrid', 'FINALIZADO', '3 sobres de premio', 1, 1, 1);
+INSERT INTO `Torneo` (`idTorneo`, `idOrganizador`, `idLiga`, `nombre`, `descripcion`, `precioInscripcion`, `numeroRondas`, `duracionRondas`, `fechaHoraInicio`, `lugarCelebracion`, `plazasMax`, `estado`, `premios`, `idFormatoTorneo`, `idJuego`, `idFormatoJuego`) VALUES
+(1, 1, NULL, 'Torneo Enero', 'Torneo mensual de cartas', 10.0, 5, 60, '2025-10-05 10:00:00', 'Centro Cultural A', 32, 'FINALIZADO', 'Trofeo + Cartas', 1, 1, 1),
+(2, 2, NULL, 'Torneo Febrero', 'Competición amistosa', 12.0, 6, 50, '2025-11-02 10:00:00', 'Sala de Juegos B', 24, 'FINALIZADO', 'Medallas', 1, 1, 1),
+(3, 3, NULL, 'Torneo Marzo', 'Torneo de estrategia', 15.0, 4, 70, '2025-12-07 10:00:00', 'Club Recreativo C', 16, 'PLANIFICADO', 'Puntos de juego', 1, 1, 1),
+(4, 4, NULL, 'Torneo Abril', 'Torneo rápido', 8.0, 3, 40, '2026-01-04 10:00:00', 'Sala D', 20, 'PLANIFICADO', 'Cartas promocionales', 1, 1, 1),
+(5, 5, NULL, 'Torneo Mayo', 'Torneo mensual', 10.0, 5, 60, '2026-02-01 10:00:00', 'Centro E', 32, 'PLANIFICADO', 'Trofeo', 1, 1, 1),
+(6, 6, NULL, 'Torneo Junio', 'Torneo competitivo', 12.0, 6, 50, '2026-03-07 10:00:00', 'Sala F', 24, 'PLANIFICADO', 'Cartas especiales', 1, 1, 1),
+(7, 7, NULL, 'Torneo Julio', 'Torneo de estrategia avanzada', 15.0, 4, 70, '2026-04-04 10:00:00', 'Club G', 16, 'PLANIFICADO', 'Puntos y medallas', 1, 1, 1),
+(8, 8, NULL, 'Torneo Agosto', 'Torneo rápido y divertido', 8.0, 3, 40, '2026-05-02 10:00:00', 'Sala H', 20, 'PLANIFICADO', 'Cartas promocionales', 1, 1, 1),
+(9, 1, NULL, 'Torneo Septiembre', 'Competición mensual', 10.0, 5, 60, '2026-06-06 10:00:00', 'Centro I', 32, 'PLANIFICADO', 'Trofeo', 1, 1, 1),
+(10, 2, NULL, 'Torneo Octubre', 'Torneo amistoso', 12.0, 6, 50, '2026-07-04 10:00:00', 'Sala J', 24, 'PLANIFICADO', 'Medallas', 1, 1, 1),
+(11, 3, NULL, 'Torneo Noviembre', 'Torneo de estrategia', 15.0, 4, 70, '2026-08-01 10:00:00', 'Club K', 16, 'PLANIFICADO', 'Puntos de juego', 1, 1, 1),
+(12, 4, NULL, 'Torneo Diciembre', 'Torneo rápido', 8.0, 3, 40, '2026-09-05 10:00:00', 'Sala L', 20, 'PLANIFICADO', 'Cartas promocionales', 1, 1, 1);
 
 -- --------------------------------------------------------
 

@@ -75,6 +75,9 @@ export default function TorneoDetalle() {
                     <strong>Juego:</strong> {torneo.idJuego}
                 </p>
                 <p className="text-gray-600 mb-2">
+                    <strong>Plazas máximas:</strong> {torneo.plazasMax}
+                </p>
+                <p className="text-gray-600 mb-2">
                     <strong>Liga:</strong> {torneo.nombreLiga}
                 </p>
                 <p className="text-gray-700 mt-4">{torneo.descripcion}</p>

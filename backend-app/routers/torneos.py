@@ -93,6 +93,7 @@ def torneos_usuario(email: str):
             t.duracionRondas AS DuracionRondas,
             t.fechaHoraInicio AS FechaHoraInicio,
             t.lugarCelebracion AS LugarCelebracion,
+            t.plazasMax AS PlazasMax,
             t.estado AS Estado,
             t.premios AS Premios
             FROM Torneo t
@@ -124,8 +125,8 @@ def crear_torneo(torneo: Torneo):
         cursor.execute("""
             INSERT INTO Torneo 
             (nombre, descripcion, precioInscripcion, numeroRondas, duracionRondas, fechaHoraInicio, 
-             lugarCelebracion, idOrganizador, idFormatoTorneo, idJuego, idFormatoJuego, idLiga, premios, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             lugarCelebracion, plazasMax, idOrganizador, idFormatoTorneo, idJuego, idFormatoJuego, idLiga, premios, estado)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             torneo.nombre, torneo.descripcion, torneo.precioInscripcion, torneo.numeroRondas,
             torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, torneo.idOrganizador,
@@ -139,3 +140,5 @@ def crear_torneo(torneo: Torneo):
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
+
+

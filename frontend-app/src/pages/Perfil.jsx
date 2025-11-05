@@ -116,6 +116,9 @@ export default function Perfil() {
                     <strong>Rondas:</strong> {torneo.Rondas}
                   </p>
                   <p>
+                    <strong>Rondas:</strong> {torneo.plazasMax}
+                  </p>
+                  <p>
                     <strong>Duración de las rondas:</strong>{" "}
                     {torneo.DuracionRondas} min
                   </p>

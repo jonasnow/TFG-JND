@@ -10,6 +10,7 @@ class Torneo(BaseModel):
     duracionRondas: int
     fechaHoraInicio: datetime
     lugarCelebracion: str
+    plazasMax: int
     idOrganizador: int
     idFormatoTorneo: int
     idJuego: int
