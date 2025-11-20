@@ -21,7 +21,7 @@ def listar_usuarios():
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 # Crear usuario con mensajes distintos para email y teléfono
-@router.post("/")
+@router.post("/register")
 def crear_usuario(usuario: Usuario):
     try:
         password_hash = bcrypt.hashpw(usuario.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

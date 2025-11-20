@@ -46,7 +46,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/usuario", {
+      const response = await fetch("http://localhost:8000/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -65,6 +65,7 @@ export default function Register() {
       } else {
         setResultado(result.error || "Error al crear usuario");
         setExito(false);
+        setIsLoading(false);
       }
     } catch (error) {
       setResultado("Error: " + error.message);

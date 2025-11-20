@@ -63,6 +63,7 @@ def inscribir_usuario(datos: dict):
             return {"error": "Usuario no encontrado"}
         #Como el par idEquipo, idTorneo son clave primaria compuesta, si ya existe la inscripción saltará excepción
         cursor.execute("INSERT INTO Equipo_Torneo (idEquipo, idTorneo) VALUES (%s, %s);", (equipo['idEquipo'], id_torneo))
+        #añadir timestamp de inscripción que sea la fecha de inscripción
         conn.commit()
         
         return {"mensaje": "Inscrito correctamente en el torneo."}
@@ -129,7 +130,7 @@ def crear_torneo(torneo: Torneo):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             torneo.nombre, torneo.descripcion, torneo.precioInscripcion, torneo.numeroRondas,
-            torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, torneo.idOrganizador,
+            torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, torneo.plazasMax, torneo.idOrganizador,
             torneo.idFormatoTorneo, torneo.idJuego, torneo.idFormatoJuego, torneo.idLiga,
             torneo.premios, torneo.estado
         ))
@@ -141,4 +142,77 @@ def crear_torneo(torneo: Torneo):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
+#Eliminar miembro de un torneo
+@router.delete("/eliminar_equipo_torneo/{id_torneo}/{id_equipo}")
+def eliminar_equipo_torneo(id_torneo: int, id_equipo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM Equipo_Torneo 
+            WHERE idTorneo = %s AND idEquipo = %s;
+        """, (id_torneo, id_equipo))
+        existe = cursor.fetchone()
+        #Si no existe el registro, no se puede eliminar
+        if existe == 0:
+            return {"eliminado": False, "motivo": "No estaba inscrito"}
+        else:
+        # Eliminar el registro del equipo en el torneo
+            cursor.execute("""
+                DELETE FROM Equipo_Torneo
+                WHERE idTorneo = %s AND idEquipo = %s;
+            """, (id_torneo, id_equipo))
+            conn.commit()
 
+        return {"eliminado": True, "mensaje": "Eliminado correctamente"}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Comprobar si todos los usuarios de un torneo están inscritos
+@router.get("/comprobar_inscripciones/{id_torneo}")
+def comprobar_inscripciones(id_torneo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT COUNT(*) AS total
+            FROM Equipo_Torneo
+            WHERE idTorneo = %s;
+        """, (id_torneo,))
+        total = cursor.fetchone()['total']
+
+        if total == 0:
+            return {"todas_confirmadas": False, "motivo": "No hay inscripciones"}
+
+        cursor.execute("""
+            SELECT COUNT(*) AS confirmados
+            FROM Equipo_Torneo
+            WHERE idTorneo = %s
+              AND confirmacionAsistencia = 'CONFIRMADA'
+              AND confirmacionInscripcion = 'CONFIRMADA';
+        """, (id_torneo,))
+        confirmados = cursor.fetchone()['confirmados']
+
+        # Comprobar si todos están confirmados
+        if confirmados == total:
+            return {"todas_confirmadas": True}
+        else:
+            return {
+                "todas_confirmadas": False,
+                "confirmados": confirmados,
+                "total": total
+            }
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+#Generar ronda suizo
