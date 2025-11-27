@@ -30,7 +30,7 @@ def login(datos: LoginData, response: Response):
         if not bcrypt.checkpw(datos.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
             return {"error": "Contraseña incorrecta"}
 
-        payload = {"sub": user["email"], "nombre": user["nombre"]}
+        payload = {"sub": user["email"], "nombre": user["nombre"], "idUsuario": user["idUsuario"]}
         access_token = create_access_token(payload)
         refresh_token = create_refresh_token(payload)
 
@@ -68,7 +68,8 @@ def refresh_token(request: Request, response: Response):
 
         access_token = create_access_token({
             "sub": payload["sub"],
-            "nombre": payload["nombre"]
+            "nombre": payload["nombre"],
+            "idUsuario": payload["idUsuario"]
         })
 
         response.set_cookie(
@@ -94,7 +95,7 @@ def me(request: Request):
 
     try:
         payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return {"usuario": payload["nombre"], "email": payload["sub"]}
+        return {"usuario": payload["nombre"], "email": payload["sub"], "idUsuario": payload["idUsuario"]}
     except Exception:
         return {"error": "Token inválido o expirado"}
 

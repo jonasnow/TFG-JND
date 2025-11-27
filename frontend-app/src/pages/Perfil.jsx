@@ -12,7 +12,7 @@ export default function Perfil() {
   useEffect(() => {
     const fetchTorneos = async () => {
       if (!user?.email) {
-        console.log("No hay email, se detiene la carga");
+        ("No hay email, usuario no autenticado");
         setCargando(false);
         return;
       }

@@ -214,7 +214,7 @@ CREATE TABLE `FormatoJuego` (
 
 INSERT INTO `FormatoJuego` (`idFormatoJuego`, `nombre`, `numMaxJugadores`, `idJuego`) VALUES
 
-(1, 'Draft', 4, 1),
+(1, 'Draft', 4, 1), -- Magic: The Gathering
 (2, 'Sealed', 4, 1),
 (3, 'Standard', 2, 1),
 (4, 'Modern', 2, 1),
@@ -222,35 +222,39 @@ INSERT INTO `FormatoJuego` (`idFormatoJuego`, `nombre`, `numMaxJugadores`, `idJu
 (6, 'Commander', 4, 1),
 (7, 'Pauper', 2, 1),
 
-(8, 'Goat Format', 2, 3),
+(8, 'Goat Format', 2, 3), -- Yu-Gi-Oh!
 (9, 'Edison Format', 2, 3),
 (10, 'Tengu Format', 2, 3),
 (11, 'Wind-Up Format', 2, 3),
 (12, 'HAT Format', 2, 3),
 (13, 'Genesys Format', 2, 3),
 
-(14, 'Standard', 2, 2),
+(14, 'Standard', 2, 2), -- Pokémon TCG
 (15, 'Expanded', 2, 2),
 (16, 'Unlimited', 2, 2),
 (17, 'Sealed', 2, 2),
 
-(18, 'Classic Constructed', 2, 4),
+(18, 'Classic Constructed', 2, 4), -- Flesh and Blood
 (19, 'Blitz', 2, 4),
 (20, 'Ultimate Pit Fight', 6, 4),
 (21, 'Commoner', 2, 4),
 
-(22, 'Standard', 2, 5),
+(22, 'Standard', 2, 5), -- One Piece TCG
 (23, 'Sealed', 2, 5),
 (24, '5 Packs Battle', 2, 5),
 
-(25, 'Core Constructed', 2, 6),
+(25, 'Core Constructed', 2, 6), -- Lorcana
 (26, 'Infinity', 2, 6),
 (27, 'Sealed', 2, 6),
 
-(28, 'Premier', 2, 7),
+(28, 'Premier', 2, 7), -- Star Wars Unlimited
 (29, 'Sealed', 2, 7),
-(30, 'Twin Suns', 4, 7);
+(30, 'Twin Suns', 4, 7),
 
+(31, 'Base', 4, 8), -- Catán
+(32, 'Clásico', 10, 9), -- Jungle Speed
+(33, 'Clásico', 6, 10), -- Virus
+(34, 'Base', 4, 11); -- Dominion
 
 -- --------------------------------------------------------
 
@@ -375,10 +379,10 @@ INSERT INTO `Torneo`
 (14, 6, NULL, 'Lorcana Infinity Cup', 'Torneo formato Infinity', 15.0, 5, 45, '2026-02-20 10:00:00', 'Sala N', 24, 'PLANIFICADO', 'Cartas raras', 1, 6, 26, '2025-10-19 00:13:00'),
 (15, 7, NULL, 'SWU Premier Assault', 'Torneo Premier', 10.0, 5, 45, '2026-01-05 10:00:00', 'Sala O', 32, 'PLANIFICADO', 'Cartas premium', 1, 7, 28, '2025-10-19 00:14:00'),
 (16, 8, NULL, 'SWU Twin Suns Battle', 'Formato Twin Suns', 12.0, 4, 60, '2026-02-10 17:00:00', 'Sala P', 20, 'PLANIFICADO', 'Tapetes SW', 1, 7, 30, '2025-10-19 00:15:00'),
-(17, 1, NULL, 'Catán Winter Championship', 'Torneo del clásico Catán', 8.0, 3, 60, '2026-01-14 10:00:00', 'Centro Q', 16, 'PLANIFICADO', 'Juego Catán + expansión', 1, 8, NULL, '2025-10-19 00:16:00'),
-(18, 2, NULL, 'Jungle Speed Reflex Cup', 'Competición de reflejos', 5.0, 5, 15, '2026-02-12 10:00:00', 'Sala R', 20, 'PLANIFICADO', 'Edición limitada', 1, 9, NULL, '2025-10-19 00:17:00'),
-(19, 3, NULL, 'Virus Survival Event', 'Partidas eliminatorias de Virus', 6.0, 4, 20, '2026-01-25 17:00:00', 'Centro S', 24, 'PLANIFICADO', 'Barajas exclusivas', 1, 10, NULL, '2025-10-19 00:18:00'),
-(20, 4, NULL, 'Dominion Deckmaster Cup', 'Torneo de construcción de mazos', 7.0, 4, 30, '2026-03-01 10:00:00', 'Sala T', 16, 'PLANIFICADO', 'Expansiones Dominion', 1, 11, NULL, '2025-10-19 00:19:00');
+(17, 1, NULL, 'Catán Winter Championship', 'Torneo del clásico Catán', 8.0, 3, 60, '2026-01-14 10:00:00', 'Centro Q', 16, 'PLANIFICADO', 'Juego Catán + expansión', 1, 8, 31, '2025-10-19 00:16:00'),
+(18, 2, NULL, 'Jungle Speed Reflex Cup', 'Competición de reflejos', 5.0, 5, 15, '2026-02-12 10:00:00', 'Sala R', 20, 'PLANIFICADO', 'Edición limitada', 1, 9, 32, '2025-10-19 00:17:00'),
+(19, 3, NULL, 'Virus Survival Event', 'Partidas eliminatorias de Virus', 6.0, 4, 20, '2026-01-25 17:00:00', 'Centro S', 24, 'PLANIFICADO', 'Barajas exclusivas', 1, 10, 33, '2025-10-19 00:18:00'),
+(20, 4, NULL, 'Dominion Deckmaster Cup', 'Torneo de construcción de mazos', 7.0, 4, 30, '2026-03-01 10:00:00', 'Sala T', 16, 'PLANIFICADO', 'Expansiones Dominion', 1, 11, 34, '2025-10-19 00:19:00');
 
 -- --------------------------------------------------------
 

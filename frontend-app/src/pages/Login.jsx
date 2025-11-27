@@ -19,7 +19,7 @@ export default function Login() {
             });
             const meData = await meRes.json();
             if (!meData.error) {
-                setUser({ nombre: meData.usuario, email: meData.email });
+                setUser({ nombre: meData.usuario, email: meData.email, idUsuario: meData.idUsuario });
             }
             navigate("/");
         } else {

@@ -19,7 +19,9 @@ export default function Navbar() {
         <Link to="/perfil" className="hover:bg-blue-700 px-3 py-1 rounded">
           Perfil
         </Link>
-
+        <Link to="/nuevotorneo" className="hover:bg-blue-700 px-3 py-1 rounded">
+          Crear Torneo
+        </Link>
         {user ? (
           <div className="relative">
             <button

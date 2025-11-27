@@ -7,6 +7,7 @@ import Torneos from './pages/Torneos';
 import Perfil from './pages/Perfil';
 import Register from './pages/Register';
 import TorneoDetalle from './pages/TorneoDetalle';
+import NuevoTorneo from './pages/NuevoTorneo';
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
         <Route path="/torneo/:slug" element={<Layout><TorneoDetalle /></Layout>} />
         <Route path="/perfil" element={<Layout><Perfil /></Layout>} />
         <Route path="/register" element={<Register />} />
+        <Route path="/nuevotorneo" element={<Layout><NuevoTorneo /></Layout>} />
+        <Route path="*" element={<Layout><h2>404 Not Found</h2></Layout>} />
       </Routes>
     </Router>
 

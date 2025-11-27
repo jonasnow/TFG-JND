@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 import mysql.connector
 
+from datetime import datetime
 from core.database import get_connection
 from models.torneo import Torneo
 
@@ -118,8 +119,100 @@ def torneos_usuario(email: str):
             conn.close()
 
 #Crear torneo
+
+def convert_torneo(raw: Torneo) -> dict:
+    errores = {}
+    torneo = {}
+
+    # Campos numéricos
+    numeric_fields = [
+        "idOrganizador", "idLiga", "precioInscripcion", "numeroRondas",
+        "duracionRondas", "plazasMax", "idFormatoTorneo", "idJuego", "idFormatoJuego"
+    ]
+
+    for field in numeric_fields:
+        value = getattr(raw, field)
+        if value is None or value == "":
+            torneo[field] = None
+        else:
+            try:
+                torneo[field] = int(value)
+            except ValueError:
+                try:
+                    torneo[field] = float(value)
+                except ValueError:
+                    errores[field] = "Debe ser un número válido"
+
+    # Campos de texto
+    texto_fields = ["nombre", "descripcion", "lugarCelebracion", "estado", "premios"]
+    for field in texto_fields:
+        torneo[field] = getattr(raw, field) or ""
+
+    # Fecha y hora
+    raw_fecha = getattr(raw, "fechaHoraInicio", None)
+    if isinstance(raw_fecha, str) and raw_fecha:
+        for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+            try:
+                torneo["fechaHoraInicio"] = datetime.strptime(raw_fecha, fmt)
+                break
+            except ValueError:
+                torneo["fechaHoraInicio"] = None
+        if torneo["fechaHoraInicio"] is None:
+            errores["fechaHoraInicio"] = "Fecha y hora inválida"
+        else:
+            # Formatear para la base de datos
+            torneo["fechaHoraInicio"] = torneo["fechaHoraInicio"].strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        torneo["fechaHoraInicio"] = None
+
+    return torneo, errores
+
+
+
+
 @router.post("/torneo")
 def crear_torneo(torneo: Torneo):
+
+    torneo, errores = convert_torneo(torneo)
+
+    #Campos obligatorios
+    campos_obligatorios = ["idOrganizador", "nombre", "fechaHoraInicio", "lugarCelebracion", "idFormatoTorneo", "idJuego", "idFormatoJuego"]
+    for campo in campos_obligatorios:
+        if not torneo.get(campo):
+            errores[campo] = "Este campo es obligatorio"
+    #Si falta o hay algún error en los campos obligatorios, devolver errores
+    if errores:
+        return {"errores": errores}
+    
+    #Validar campos numéricos
+    if torneo.get("precioInscripcion") < 0:
+        errores["precioInscripcion"] = "Debe ser un número positivo"
+    if torneo.get("numeroRondas") <= 0:
+        errores["numeroRondas"] = "Debe ser un número positivo"
+    if torneo.get("duracionRondas") <= 0:
+        errores["duracionRondas"] = "Debe ser un número positivo"
+    if torneo.get("plazasMax") <= 0:
+        errores["plazasMax"] = "Debe ser un número positivo"
+    else:
+        #Comprobar plazasMax según el juego seleccionado
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT numMaxJugadores FROM FormatoJuego WHERE idFormatoJuego = %s;", (torneo["idFormatoJuego"],))
+            max_jugadores = cursor.fetchone()
+            if max_jugadores:
+                torneo["plazasMax"] = max_jugadores[0]
+            else:
+                errores["plazasMax"] = "No se pudo obtener el número máximo de jugadores para el juego seleccionado"
+        finally:
+            if 'conn' in locals() and conn.is_connected():
+                conn.close()
+    print(torneo)
+    #Devuelve errores si los hay
+    if errores:
+        return {"errores": errores}
+
+   #Insertar en la base de datos
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -127,20 +220,22 @@ def crear_torneo(torneo: Torneo):
             INSERT INTO Torneo 
             (nombre, descripcion, precioInscripcion, numeroRondas, duracionRondas, fechaHoraInicio, 
              lugarCelebracion, plazasMax, idOrganizador, idFormatoTorneo, idJuego, idFormatoJuego, idLiga, premios, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            torneo.nombre, torneo.descripcion, torneo.precioInscripcion, torneo.numeroRondas,
-            torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, torneo.plazasMax, torneo.idOrganizador,
-            torneo.idFormatoTorneo, torneo.idJuego, torneo.idFormatoJuego, torneo.idLiga,
-            torneo.premios, torneo.estado
-        ))
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (torneo["nombre"], torneo["descripcion"], torneo["precioInscripcion"], torneo["numeroRondas"],
+            torneo["duracionRondas"], torneo["fechaHoraInicio"], torneo["lugarCelebracion"], torneo["plazasMax"],
+            torneo["idOrganizador"], torneo["idFormatoTorneo"], torneo["idJuego"], torneo["idFormatoJuego"],
+            torneo.get("idLiga"), torneo["premios"], torneo["estado"]
+            ))
         conn.commit()
         return {"mensaje": f"Torneo '{torneo.nombre}' creado correctamente"}
+
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Error al crear torneo: {str(e)}"}
+
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
+
 
 #Eliminar miembro de un torneo
 @router.delete("/eliminar_equipo_torneo/{id_torneo}/{id_equipo}")
@@ -214,5 +309,66 @@ def comprobar_inscripciones(id_torneo: int):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
+#Devolver formatos de torneo
+@router.get("/formatos_torneo")
+def formatos_torneo():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT idFormatoTorneo, nombre FROM FormatoTorneo;")
+        formatos = cursor.fetchall()
+        return formatos
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+#Devolver juegos disponibles
+@router.get("/juegos")
+def juegos():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT idJuego, nombre FROM Juego;")
+        juegos = cursor.fetchall()
+        return juegos
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
 
-#Generar ronda suizo
+#Devolver formatos de juego
+@router.get("/formatos_juego/{id_juego}")
+def formatos_juego(id_juego: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""SELECT idFormatoJuego, nombre FROM FormatoJuego WHERE idJuego = %s;""", (id_juego,))
+        formatos = cursor.fetchall()
+        return formatos
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+#Devolver el número de inscritos en un torneo
+@router.get("/numero_inscritos/{id_torneo}")
+def numero_inscritos(id_torneo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM Equipo_Torneo 
+            WHERE idTorneo = %s;
+        """, (id_torneo,))
+        numero = cursor.fetchone()[0]
+        return {"numero_inscritos": numero}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
