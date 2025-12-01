@@ -10,6 +10,7 @@ export default function TorneoDetalle() {
     const [mensaje, setMensaje] = useState("");
     const [error, setError] = useState(null);
     const id = slug ? Number(slug.split("-").pop()) : null;
+
     useEffect(() => {
         const fetchTorneo = async () => {
             try {
@@ -54,36 +55,24 @@ export default function TorneoDetalle() {
     };
 
     if (error)
-        return <p className="text-center text-red-500 mt-6">{error}</p>;
+        return <p className="text-center mt-6 text-red-500 font-semibold">{error}</p>;
     if (!torneo)
-        return <p className="text-center mt-6">Cargando torneo...</p>;
+        return <p className="text-center mt-6 text-[var(--color-text)]">Cargando torneo...</p>;
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center p-8">
-            <div className="bg-white shadow-md rounded-2xl p-8 max-w-2xl w-full">
-                <h1 className="text-3xl font-bold mb-4 text-gray-800">
-                    {torneo.nombre}
-                </h1>
-                <p className="text-gray-600 mb-2">
-                    <strong>Lugar:</strong> {torneo.lugarCelebracion}
-                </p>
-                <p className="text-gray-600 mb-2">
-                    <strong>Hora inicio:</strong>{" "}
-                    {new Date(torneo.fechaHoraInicio).toLocaleString()}
-                </p>
-                <p className="text-gray-600 mb-2">
-                    <strong>Juego:</strong> {torneo.idJuego}
-                </p>
-                <p className="text-gray-600 mb-2">
-                    <strong>Plazas máximas:</strong> {torneo.plazasMax}
-                </p>
-                <p className="text-gray-600 mb-2">
-                    <strong>Liga:</strong> {torneo.nombreLiga}
-                </p>
-                <p className="text-gray-700 mt-4">{torneo.descripcion}</p>
+        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col items-center p-8">
+            <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full">
+                <h1 className="text-3xl font-bold mb-4">{torneo.nombre}</h1>
+
+                <p className="mb-2"><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
+                <p className="mb-2"><strong>Hora inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()}</p>
+                <p className="mb-2"><strong>Juego:</strong> {torneo.idJuego}</p>
+                <p className="mb-2"><strong>Plazas máximas:</strong> {torneo.plazasMax}</p>
+                <p className="mb-2"><strong>Liga:</strong> {torneo.nombreLiga}</p>
+                <p className="mt-4">{torneo.descripcion}</p>
 
                 {mensaje && (
-                    <p className="mt-4 text-center font-medium text-green-600">
+                    <p className="mt-4 text-center font-medium text-[var(--color-primary)]">
                         {mensaje}
                     </p>
                 )}
@@ -93,7 +82,7 @@ export default function TorneoDetalle() {
                         <>
                             <button
                                 onClick={() => setMostrarConfirmacion(true)}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
                             >
                                 Inscribirse
                             </button>
@@ -107,7 +96,7 @@ export default function TorneoDetalle() {
                     ) : (
                         <button
                             onClick={() => navigate("/login")}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                            className="bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)] transition"
                         >
                             Iniciar sesión para registro
                         </button>
@@ -116,18 +105,13 @@ export default function TorneoDetalle() {
 
                 {mostrarConfirmacion && (
                     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <div className="bg-white rounded-2xl shadow-lg p-6 w-96">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-800 text-center">
-                                Confirmar inscripción
-                            </h2>
-                            <p className="text-center text-gray-600 mb-4">
-                                Vas a confirmar inscripción para el torneo{" "}
-                                <strong>{torneo.nombre}</strong>
-                            </p>
+                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-96">
+                            <h2 className="text-xl font-semibold mb-4 text-center">{`Confirmar inscripción`}</h2>
+                            <p className="text-center mb-4">{`Vas a confirmar inscripción para el torneo ${torneo.nombre}`}</p>
                             <div className="flex justify-center space-x-4">
                                 <button
                                     onClick={handleInscripcion}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
                                 >
                                     Confirmar
                                 </button>

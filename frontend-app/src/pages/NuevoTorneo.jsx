@@ -38,7 +38,6 @@ export default function RegisterTorneo() {
 
   // Cargar juegos, formatos base y ligas
   useEffect(() => {
-
     const inicializar = async () => {
       if (!user?.email) {
         setCargando(false);
@@ -71,7 +70,6 @@ export default function RegisterTorneo() {
     }
   }, [user]);
 
-
   useEffect(() => {
     if (!formData.idJuego) return;
 
@@ -96,7 +94,7 @@ export default function RegisterTorneo() {
 
   if (!user)
     return (
-      <div className="text-center mt-10 text-gray-600">
+      <div className="text-center mt-10 text-[var(--color-text)]">
         No has iniciado sesión.
       </div>
     );
@@ -110,7 +108,7 @@ export default function RegisterTorneo() {
 
   if (cargando)
     return (
-      <div className="text-center mt-10 text-gray-600">
+      <div className="text-center mt-10 text-[var(--color-text)]">
         Cargando...
       </div>
     );
@@ -170,195 +168,80 @@ export default function RegisterTorneo() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-      <div className="bg-white shadow-md rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)] font-play p-6">
+      <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-6">
           Registrar Torneo
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
 
-          <div>
-            <label className="block text-gray-700 mb-1">Nombre</label>
-            <input
-              type="text"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Descripción</label>
-            <textarea
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Juego</label>
-            <select
-              name="idJuego"
-              value={formData.idJuego}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2"
-            >
-              <option value="">Selecciona un juego</option>
-              {juegos.map((j) => (
-                <option key={j.idJuego} value={j.idJuego}>
-                  {j.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Formato del Torneo</label>
-            <select
-              name="idFormatoTorneo"
-              value={formData.idFormatoTorneo}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2"
-            >
-              <option value="">Selecciona un formato</option>
-              {formatosTorneo.map((f) => (
-                <option key={f.idFormatoTorneo} value={f.idFormatoTorneo}>
-                  {f.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">
-              Formato del Juego
-            </label>
-            <select
-              name="idFormatoJuego"
-              value={formData.idFormatoJuego}
-              onChange={handleChange}
-              disabled={!formData.idJuego}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            >
-              <option value="">Selecciona un formato</option>
-              {formatosJuego.map((fj) => (
-                <option key={fj.idFormatoJuego} value={fj.idFormatoJuego}>
-                  {fj.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Liga</label>
-            <select
-              name="idLiga"
-              value={formData.idLiga}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            >
-              <option value="">Selecciona una liga disponible</option>
-              {ligas.map((f) => (
-                <option key={f.idLiga} value={f.idLiga}>
-                  {f.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Precio inscripción</label>
-            <input
-              type="number"
-              name="precioInscripcion"
-              value={formData.precioInscripcion}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Plazas Disponibles</label>
-            <small className="text-gray-500">Por defecto, número máximo de jugadores para una partida</small>
-            <input
-              type="number"
-              name="plazasMax"
-              value={formData.plazasMax}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Número de rondas</label>
-            <input
-              type="number"
-              name="numeroRondas"
-              value={formData.numeroRondas}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Duración de rondas (min)</label>
-
-            <input
-              type="number"
-              name="duracionRondas"
-              value={formData.duracionRondas}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-1">Premios</label>
-            <textarea
-              name="premios"
-              value={formData.premios}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Fecha y hora de inicio</label>
-            <input
-              type="datetime-local"
-              name="fechaHoraInicio"
-              value={formData.fechaHoraInicio}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Lugar</label>
-            <input
-              type="text"
-              name="lugarCelebracion"
-              value={formData.lugarCelebracion}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2"
-            />
-          </div>
+          {/** Inputs y selects adaptados al tema */}
+          {[
+            { label: "Nombre", name: "nombre", type: "text", required: true },
+            { label: "Descripción", name: "descripcion", type: "textarea" },
+            { label: "Juego", name: "idJuego", type: "select", required: true, options: juegos },
+            { label: "Formato del Torneo", name: "idFormatoTorneo", type: "select", required: true, options: formatosTorneo },
+            { label: "Formato del Juego", name: "idFormatoJuego", type: "select", options: formatosJuego, disabled: !formData.idJuego },
+            { label: "Liga", name: "idLiga", type: "select", options: ligas },
+            { label: "Precio inscripción", name: "precioInscripcion", type: "number" },
+            { label: "Plazas Disponibles", name: "plazasMax", type: "number", note: "Por defecto, número máximo de jugadores para una partida" },
+            { label: "Número de rondas", name: "numeroRondas", type: "number" },
+            { label: "Duración de rondas (min)", name: "duracionRondas", type: "number" },
+            { label: "Premios", name: "premios", type: "textarea" },
+            { label: "Fecha y hora de inicio", name: "fechaHoraInicio", type: "datetime-local", required: true },
+            { label: "Lugar", name: "lugarCelebracion", type: "text", required: true },
+          ].map((field) => (
+            <div key={field.name}>
+              <label className="block mb-1 opacity-80">{field.label}</label>
+              {field.note && <small className="block text-gray-500 mb-1">{field.note}</small>}
+              {field.type === "textarea" ? (
+                <textarea
+                  name={field.name}
+                  value={formData[field.name]}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] border-gray-300 dark:border-gray-700 font-play focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                />
+              ) : field.type === "select" ? (
+                <select
+                  name={field.name}
+                  value={formData[field.name]}
+                  onChange={handleChange}
+                  disabled={field.disabled}
+                  required={field.required}
+                  className="w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] border-gray-300 dark:border-gray-700 font-play focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                >
+                  <option value="">Selecciona una opción</option>
+                  {field.options && field.options.map((opt) => (
+                    <option key={opt.idJuego || opt.idFormatoTorneo || opt.idFormatoJuego || opt.idLiga} value={opt.idJuego || opt.idFormatoTorneo || opt.idFormatoJuego || opt.idLiga}>
+                      {opt.nombre}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={field.type}
+                  name={field.name}
+                  value={formData[field.name]}
+                  onChange={handleChange}
+                  required={field.required}
+                  className="w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] border-gray-300 dark:border-gray-700 font-play focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                />
+              )}
+            </div>
+          ))}
 
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-2 rounded-lg text-white transition 
-              ${isLoading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full py-2 rounded-lg text-white transition
+              ${isLoading ? "bg-gray-400" : "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)]"}`}
           >
             {isLoading ? "Registrando..." : "Registrar Torneo"}
           </button>
         </form>
 
         {resultado && (
-          <pre className="bg-gray-100 text-sm p-3 rounded-lg mt-4 whitespace-pre-wrap break-words">
+          <pre className="bg-[var(--color-bg)] text-[var(--color-text)] text-sm p-3 rounded-lg mt-4 whitespace-pre-wrap break-words font-play">
             {resultado}
           </pre>
         )}

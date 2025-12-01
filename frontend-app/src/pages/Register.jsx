@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -74,122 +75,63 @@ export default function Register() {
     }
   };
 
-
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-      <div className="bg-white shadow-md rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          Formulario de Usuario
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 mb-1">Nombre</label>
-            <input
-              type="text"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
+      <Navbar />
+      <div className="flex flex-col items-center justify-center pt-16 pb-10 px-6">
+        <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 w-full max-w-md">
+          <h1 className="text-2xl font-bold text-center mb-6">
+            Registro
+          </h1>
 
-          <div>
-            <label className="block text-gray-700 mb-1">Apellidos</label>
-            <input
-              type="text"
-              name="apellidos"
-              value={formData.apellidos}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {[
+              { label: "Nombre", name: "nombre", type: "text", required: true },
+              { label: "Apellidos", name: "apellidos", type: "text", required: true },
+              { label: "Localidad", name: "localidad", type: "text" },
+              { label: "Email", name: "email", type: "email", required: true, error: emailError },
+              { label: "Contraseña", name: "password", type: "password", required: true },
+              { label: "Confirmar contraseña", name: "confirmPassword", type: "password", required: true, error: passwordError },
+              { label: "Teléfono", name: "telefono", type: "text" },
+            ].map((field) => (
+              <div key={field.name}>
+                <label className="block mb-1 opacity-80">{field.label}</label>
+                <input
+                  type={field.type}
+                  name={field.name}
+                  value={formData[field.name]}
+                  onChange={handleChange}
+                  required={field.required}
+                  className={`w-full border rounded-lg p-2
+                    bg-[var(--color-bg)] text-[var(--color-text)]
+                    border-gray-300 dark:border-gray-700
+                    focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]
+                    ${field.error ? "border-red-500" : ""}
+                  `}
+                />
+                {field.error && <p className="text-red-500 text-sm mt-1">{field.error}</p>}
+              </div>
+            ))}
 
-          <div>
-            <label className="block text-gray-700 mb-1">Localidad</label>
-            <input
-              type="text"
-              name="localidad"
-              value={formData.localidad}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${emailError ? "border-red-500" : "border-gray-300"
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-2 rounded-lg font-bold text-white transition
+                ${isLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)]"
                 }`}
-            />
-            {emailError && (
-              <p className="text-red-500 text-sm mt-1">{emailError}</p>
-            )}
-          </div>
+            >
+              {isLoading ? "Registrando..." : "Registrarse"}
+            </button>
+          </form>
 
-          <div>
-            <label className="block text-gray-700 mb-1">Contraseña</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">
-              Confirmar contraseña
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              className={`w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none ${passwordError ? "border-red-500" : "border-gray-300"
-                }`}
-            />
-            {passwordError && (
-              <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-1">Teléfono</label>
-            <input
-              type="text"
-              name="telefono"
-              value={formData.telefono}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-2 rounded-lg text-white transition 
-              ${isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-          >
-            {isLoading ? "Registrando..." : "Registrarse"}
-          </button>
-
-        </form>
-
-        {resultado && (
-          <pre className="bg-gray-100 text-sm p-3 rounded-lg mt-4 whitespace-pre-wrap break-words">
-            {resultado}
-          </pre>
-        )}
+          {resultado && (
+            <pre className="bg-[var(--color-bg)] text-[var(--color-text)] text-sm p-3 rounded-lg mt-4 whitespace-pre-wrap break-words">
+              {resultado}
+            </pre>
+          )}
+        </div>
       </div>
     </div>
   );
