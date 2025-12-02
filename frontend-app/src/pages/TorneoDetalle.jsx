@@ -8,6 +8,8 @@ export default function TorneoDetalle() {
     const [usuario, setUsuario] = useState(null);
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
     const [mensaje, setMensaje] = useState("");
+    const [inscrito, setInscrito] = useState(false);
+    const [cargandoInscripcion, setCargandoInscripcion] = useState(true); //para manejar el estado de los botones de inscripcion
     const [error, setError] = useState(null);
     const id = slug ? Number(slug.split("-").pop()) : null;
 
@@ -36,6 +38,31 @@ export default function TorneoDetalle() {
         };
         checkUser();
     }, [id]);
+
+    const checkInscripcion = async (idUsuario, idTorneo) => {
+        try {
+            const res = await fetch(
+                `http://localhost:8000/usuario_inscrito/${idUsuario}/${idTorneo}`,
+                { credentials: "include" }
+            );
+            const data = await res.json();
+
+            if (!data.error) {
+                setInscrito(data.inscrito);
+            }
+        } finally {
+            setCargandoInscripcion(false);
+        }
+    };
+
+
+
+    useEffect(() => {
+        if (usuario && id) {
+            setCargandoInscripcion(true);
+            checkInscripcion(usuario.idUsuario, id);
+        }
+    }, [usuario, id]);
 
     const handleInscripcion = async () => {
         try {
@@ -77,22 +104,32 @@ export default function TorneoDetalle() {
                     </p>
                 )}
 
-                <div className="mt-6 flex justify-center space-x-4">
+                <div className="mt-6 flex justify-center">
                     {usuario ? (
-                        <>
-                            <button
-                                onClick={() => setMostrarConfirmacion(true)}
-                                className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                            >
-                                Inscribirse
-                            </button>
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
-                            >
-                                Volver
-                            </button>
-                        </>
+
+                        cargandoInscripcion ? (
+                            <p className="text-center text-gray-400">Comprobando inscripción...</p>
+                        ) : !inscrito ? (
+                            <>
+                                <button
+                                    onClick={() => setMostrarConfirmacion(true)}
+                                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+                                >
+                                    Inscribirse
+                                </button>
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
+                                >
+                                    Volver
+                                </button>
+                            </>
+                        ) : (
+                            <p className="text-center text-green-400 font-semibold">
+                                Estás inscrito en este torneo
+                            </p>
+                        )
+
                     ) : (
                         <button
                             onClick={() => navigate("/login")}

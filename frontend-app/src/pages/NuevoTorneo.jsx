@@ -174,8 +174,6 @@ export default function RegisterTorneo() {
           Registrar Torneo
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/** Inputs y selects adaptados al tema */}
           {[
             { label: "Nombre", name: "nombre", type: "text", required: true },
             { label: "Descripción", name: "descripcion", type: "textarea" },

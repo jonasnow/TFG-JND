@@ -118,6 +118,25 @@ def torneos_usuario(idUsuario: int):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
+#Ver si un usuario está inscrito en un torneo
+@router.get("/usuario_inscrito/{idUsuario}/{idTorneo}")
+def usuario_inscrito(idUsuario: int, idTorneo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""SELECT COUNT(*) 
+            FROM Equipo_Torneo et
+            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
+            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
+            WHERE ue.idUsuario = %s AND et.idTorneo = %s;""", (idUsuario, idTorneo))
+        count = cursor.fetchone()[0]
+        return {"inscrito": count > 0}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
 #Ver torneos organizados por un usuario
 @router.get("/torneos_organizador/{idUsuario}")
 def torneos_organizador(idUsuario: int):
