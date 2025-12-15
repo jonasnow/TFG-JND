@@ -13,13 +13,15 @@ export default function Navbar() {
       style={{ background: "var(--color-bg-secondary)", color: "var(--color-text)" }}
     >
       <div className="flex items-center gap-4">
-        <div className="text-xl font-bold text-[var(--color-text)]">👑 Gestorneos 👑</div>
-        <Link
-          to="/"
-          className="px-3 py-1 rounded hover:bg-[var(--color-primary)] hover:text-white transition-colors"
-        >
-          Inicio
-        </Link>
+        <div className="text-xl font-bold text-[var(--color-text)]">
+          <Link
+            to="/"
+            className="px-3 py-1 rounded hover:bg-[var(--color-primary)] hover:text-white transition-colors"
+          >
+            👑Gestorneos👑
+          </Link>
+        </div>
+
         <Link
           to="/torneos"
           className="px-3 py-1 rounded hover:bg-[var(--color-primary)] hover:text-white transition-colors"
@@ -61,12 +63,19 @@ export default function Navbar() {
             )}
           </div>
         ) : (
-          <Link
-            to="/login"
-            className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors"
-          >
-            Iniciar sesión
-          </Link>
+          <div>
+            <Link to="/register"
+              className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors"
+            >
+              Crear una cuenta
+            </Link>
+            <Link
+              to="/login"
+              className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors"
+            >
+              Iniciar sesión
+            </Link>
+          </div>
         )}
         <ThemeToggle />
       </div>

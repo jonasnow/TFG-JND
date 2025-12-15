@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(() =>
@@ -14,8 +15,15 @@ export default function ThemeToggle() {
   }, [dark]);
 
   return (
-    <button onClick={() => setDark(!dark)}>
-      {dark ? "Modo Claro" : "Modo Oscuro"}
+    <button
+      onClick={() => setDark(!dark)}
+      className="p-2 rounded-full transition hover:scale-110"
+    >
+      {dark ? (
+        <Sun className="w-5 h-5" />
+      ) : (
+        <Moon className="w-5 h-5" />
+      )}
     </button>
   );
 }

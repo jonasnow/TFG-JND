@@ -8,7 +8,7 @@ from models.usuario import Usuario
 router = APIRouter(tags=["Usuarios"])
 
 #Método de prueba, listar usuarios
-@router.get("/")
+@router.get("/usuarios")
 def listar_usuarios():
     try:
         conn = get_connection()

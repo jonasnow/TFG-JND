@@ -9,8 +9,10 @@ export default function TorneoDetalle() {
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
     const [mensaje, setMensaje] = useState("");
     const [inscrito, setInscrito] = useState(false);
-    const [cargandoInscripcion, setCargandoInscripcion] = useState(true); //para manejar el estado de los botones de inscripcion
+    const [cargandoInscripcion, setCargandoInscripcion] = useState(true);
     const [error, setError] = useState(null);
+    const [procesandoInscripcion, setProcesandoInscripcion] = useState(false);
+    const [mostrarResultado, setMostrarResultado] = useState(false);
     const id = slug ? Number(slug.split("-").pop()) : null;
 
     useEffect(() => {
@@ -55,8 +57,6 @@ export default function TorneoDetalle() {
         }
     };
 
-
-
     useEffect(() => {
         if (usuario && id) {
             setCargandoInscripcion(true);
@@ -65,6 +65,9 @@ export default function TorneoDetalle() {
     }, [usuario, id]);
 
     const handleInscripcion = async () => {
+        setProcesandoInscripcion(true);
+        setMostrarConfirmacion(false);
+
         try {
             const response = await fetch("http://localhost:8000/inscribir_usuario", {
                 method: "POST",
@@ -72,12 +75,23 @@ export default function TorneoDetalle() {
                 credentials: "include",
                 body: JSON.stringify({ email: usuario.email, idTorneo: id }),
             });
+
             const result = await response.json();
+
+            await new Promise(resolve => setTimeout(resolve, 1200)); // Espera simulada para feedback visual
+
             if (result.error) setMensaje(result.error);
-            else setMensaje(result.mensaje);
-            setMostrarConfirmacion(false);
+            else {
+                setMensaje(result.mensaje);
+                setInscrito(true);
+            }
+
+            setMostrarResultado(true);
         } catch (err) {
             setMensaje("Error al inscribirse en el torneo");
+            setMostrarResultado(true);
+        } finally {
+            setProcesandoInscripcion(false);
         }
     };
 
@@ -92,17 +106,11 @@ export default function TorneoDetalle() {
                 <h1 className="text-3xl font-bold mb-4">{torneo.nombre}</h1>
 
                 <p className="mb-2"><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
-                <p className="mb-2"><strong>Hora inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()}</p>
-                <p className="mb-2"><strong>Juego:</strong> {torneo.idJuego}</p>
+                <p className="mb-2"><strong>Hora inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()} hora local</p>
+                <p className="mb-2"><strong>Juego:</strong> {torneo.nombreJuego}</p>
                 <p className="mb-2"><strong>Plazas máximas:</strong> {torneo.plazasMax}</p>
                 <p className="mb-2"><strong>Liga:</strong> {torneo.nombreLiga}</p>
                 <p className="mt-4">{torneo.descripcion}</p>
-
-                {mensaje && (
-                    <p className="mt-4 text-center font-medium text-[var(--color-primary)]">
-                        {mensaje}
-                    </p>
-                )}
 
                 <div className="mt-6 flex justify-center">
                     {usuario ? (
@@ -110,23 +118,25 @@ export default function TorneoDetalle() {
                         cargandoInscripcion ? (
                             <p className="text-center text-gray-400">Comprobando inscripción...</p>
                         ) : !inscrito ? (
-                            <>
-                                <button
-                                    onClick={() => setMostrarConfirmacion(true)}
-                                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                                >
-                                    Inscribirse
-                                </button>
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
-                                >
-                                    Volver
-                                </button>
-                            </>
+                            !procesandoInscripcion && !mostrarResultado && (
+                                <>
+                                    <button
+                                        onClick={() => setMostrarConfirmacion(true)}
+                                        className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+                                    >
+                                        Inscribirse
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(-1)}
+                                        className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
+                                    >
+                                        Volver
+                                    </button>
+                                </>
+                            )
                         ) : (
                             <p className="text-center text-green-400 font-semibold">
-                                Estás inscrito en este torneo
+                                ✅ Estás inscrito en este torneo ✅
                             </p>
                         )
 
@@ -139,6 +149,30 @@ export default function TorneoDetalle() {
                         </button>
                     )}
                 </div>
+                {/**Espera simulada con reloj de arena */}
+                {procesandoInscripcion && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-72 text-center">
+                            <div className="animate-pulse text-4xl mb-3">⏳</div>
+                            <p>Procesando inscripción...</p>
+                        </div>
+                    </div>
+                )}
+
+                {mostrarResultado && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-80 text-center">
+                            <div className="text-green-400 text-4xl mb-3">✔️</div>
+                            <p className="font-medium">{mensaje}</p>
+                            <button
+                                className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+                                onClick={() => setMostrarResultado(false)}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {mostrarConfirmacion && (
                     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">

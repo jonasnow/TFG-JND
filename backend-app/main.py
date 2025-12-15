@@ -29,60 +29,6 @@ def health_check():
 def read_root():
     return {"message": "Hola mundo"}
 
-#Listar formatos de torneo
-#
-#@app.get("/formatos_torneo")
-#def listar_formatos_torneo():
-#    try:
-#        conn = mysql.connector.connect(**DB_CONFIG)
-#        cursor = conn.cursor(dictionary=True)
-#        cursor.execute("SELECT idFormatoTorneo, nombre FROM FormatoTorneo;")
-#        formatos = cursor.fetchall()
-#        return formatos
-#    finally:
-#        if 'conn' in locals() and conn.is_connected():
-#            conn.close()
-#
-##Listar juegos
-#@app.get("/juegos")
-#def listar_juegos():
-#    try:
-#        conn = mysql.connector.connect(**DB_CONFIG)
-#        cursor = conn.cursor(dictionary=True)
-#        cursor.execute("SELECT idJuego, nombre FROM Juego;")
-#        juegos = cursor.fetchall()
-#        return juegos
-#    finally:
-#        if 'conn' in locals() and conn.is_connected():
-#            conn.close()
-#
-##Listar formatos de juego
-#
-#@app.get("/formatos_juego")
-#def listar_formatos_juego():
-#    try:
-#        conn = mysql.connector.connect(**DB_CONFIG)
-#        cursor = conn.cursor(dictionary=True)
-#        cursor.execute("SELECT idFormatoJuego, nombre FROM FormatoJuego;")
-#        formatos = cursor.fetchall()
-#        return formatos
-#    finally:
-#        if 'conn' in locals() and conn.is_connected():
-#            conn.close()
-#
-##Listar ligas activas
-#@app.get("/ligas")
-#def listar_ligas():
-#    try:
-#        conn = mysql.connector.connect(**DB_CONFIG)
-#        cursor = conn.cursor(dictionary=True)
-#        cursor.execute("SELECT idLiga, nombre FROM Liga WHERE CURDATE() BETWEEN fechaInicio AND fechaFin;")
-#        ligas = cursor.fetchall()
-#        return ligas
-#    finally:
-#        if 'conn' in locals() and conn.is_connected():
-#            conn.close()
-
 
 
 

@@ -4,6 +4,7 @@ import mysql.connector
 from datetime import datetime
 from core.database import get_connection
 from models.torneo import Torneo
+from models.filtroTorneos import FiltroTorneos
 
 router = APIRouter(tags=["Torneos"])
 
@@ -15,15 +16,117 @@ def listar_torneos_vigentes():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT idTorneo, nombre, descripcion, lugarCelebracion, fechaHoraInicio
-            FROM Torneo
-            WHERE fechaHoraInicio > NOW()
-            ORDER BY fechaHoraInicio ASC;
+            SELECT 
+                t.idTorneo,
+                t.idOrganizador,
+                t.idLiga,
+                t.nombre,
+                t.descripcion,
+                t.precioInscripcion,
+                t.numeroRondas,
+                t.duracionRondas,
+                t.fechaHoraInicio,
+                t.lugarCelebracion,
+                t.plazasMax,
+                t.estado,
+                t.premios,
+                t.idFormatoTorneo,
+                t.idJuego,
+                t.idFormatoJuego,
+                t.fechaCreacion,
+                COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
+                j.nombre AS nombreJuego,
+                ft.nombre AS nombreFormatoTorneo,
+                fj.nombre AS nombreFormatoJuego
+            FROM Torneo t
+            LEFT JOIN Liga l ON t.idLiga = l.idLiga
+            LEFT JOIN Juego j ON t.idJuego = j.idJuego
+            LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
+            LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
+            WHERE t.fechaHoraInicio > NOW()
+            ORDER BY t.fechaHoraInicio ASC;
         """)
         torneos = cursor.fetchall()
         return torneos
     finally:
         if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Ver torneos vigentes con un filtro de búsqueda
+
+@router.post("/torneos_vigentes_filtrados")
+def listar_torneos_filtrados(filtros: FiltroTorneos):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Base query
+        query = """
+            SELECT 
+                t.idTorneo,
+                t.idOrganizador,
+                t.idLiga,
+                t.nombre,
+                t.descripcion,
+                t.precioInscripcion,
+                t.numeroRondas,
+                t.duracionRondas,
+                t.fechaHoraInicio,
+                t.lugarCelebracion,
+                t.plazasMax,
+                t.estado,
+                t.premios,
+                t.idFormatoTorneo,
+                t.idJuego,
+                t.idFormatoJuego,
+                t.fechaCreacion,
+                COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
+                j.nombre AS nombreJuego,
+                ft.nombre AS nombreFormatoTorneo,
+                fj.nombre AS nombreFormatoJuego
+            FROM Torneo t
+            LEFT JOIN Liga l ON t.idLiga = l.idLiga
+            LEFT JOIN Juego j ON t.idJuego = j.idJuego
+            LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
+            LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
+            WHERE t.fechaHoraInicio > NOW()
+        """
+
+        params = []
+
+        # Filtros dinámicos
+        if filtros.precio_min is not None:
+            query += " AND t.precioInscripcion >= %s"
+            params.append(filtros.precio_min)
+
+        if filtros.precio_max is not None:
+            query += " AND t.precioInscripcion <= %s"
+            params.append(filtros.precio_max)
+
+        if filtros.fecha_inicio is not None:
+            query += " AND t.fechaHoraInicio >= %s"
+            params.append(filtros.fecha_inicio)
+
+        if filtros.fecha_fin is not None:
+            query += " AND t.fechaHoraInicio <= %s"
+            params.append(filtros.fecha_fin)
+
+        if filtros.lugar is not None:
+            query += " AND t.lugarCelebracion LIKE %s"
+            params.append(f"%{filtros.lugar}%")
+
+        if filtros.juego is not None:
+            query += " AND j.nombre = %s"
+            params.append(filtros.juego)
+
+        query += " ORDER BY t.fechaHoraInicio ASC;"
+
+        cursor.execute(query, params)
+        torneos = cursor.fetchall()
+        return torneos
+
+    finally:
+        if "conn" in locals() and conn.is_connected():
             conn.close()
 
 #Ver más información de un torneo
@@ -34,10 +137,33 @@ def obtener_torneo(id_torneo: int):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT t.*, 
-                   COALESCE(l.nombre, 'Ninguna') AS nombreLiga
+            SELECT 
+                t.idTorneo,
+                t.idOrganizador,
+                t.idLiga,
+                t.nombre,
+                t.descripcion,
+                t.precioInscripcion,
+                t.numeroRondas,
+                t.duracionRondas,
+                t.fechaHoraInicio,
+                t.lugarCelebracion,
+                t.plazasMax,
+                t.estado,
+                t.premios,
+                t.idFormatoTorneo,
+                t.idJuego,
+                t.idFormatoJuego,
+                t.fechaCreacion,
+                COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
+                j.nombre AS nombreJuego,
+                ft.nombre AS nombreFormatoTorneo,
+                fj.nombre AS nombreFormatoJuego
             FROM Torneo t
             LEFT JOIN Liga l ON t.idLiga = l.idLiga
+            LEFT JOIN Juego j ON t.idJuego = j.idJuego
+            LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
+            LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
             WHERE t.idTorneo = %s;
         """, (id_torneo,))
         torneo = cursor.fetchone()
@@ -48,6 +174,7 @@ def obtener_torneo(id_torneo: int):
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
+
 
 #Inscribir usuario en torneo
 @router.post("/inscribir_usuario")
@@ -220,9 +347,6 @@ def convert_torneo(raw: Torneo) -> dict:
         torneo["fechaHoraInicio"] = None
 
     return torneo, errores
-
-
-
 
 @router.post("/torneo")
 def crear_torneo(torneo: Torneo):
