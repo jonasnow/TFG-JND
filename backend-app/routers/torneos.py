@@ -175,7 +175,6 @@ def obtener_torneo(id_torneo: int):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
-
 #Inscribir usuario en torneo
 @router.post("/inscribir_usuario")
 def inscribir_usuario(datos: dict):
@@ -250,14 +249,24 @@ def torneos_usuario(idUsuario: int):
 def usuario_inscrito(idUsuario: int, idTorneo: int):
     try:
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""SELECT COUNT(*) 
-            FROM Equipo_Torneo et
-            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
-            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
-            WHERE ue.idUsuario = %s AND et.idTorneo = %s;""", (idUsuario, idTorneo))
-        count = cursor.fetchone()[0]
-        return {"inscrito": count > 0}
+        cursor = conn.cursor(dictionary=True)  # Devuelve dict en lugar de tupla
+        cursor.execute("""SELECT et.confirmacionInscripcion, et.confirmacionAsistencia
+                       FROM Equipo_Torneo et
+                       INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
+                       INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
+                       WHERE ue.idUsuario = %s AND et.idTorneo = %s;
+                       """, (idUsuario, idTorneo))
+        result = cursor.fetchone()
+        if result:
+            return {
+                "confirmacionInscripcion": result["confirmacionInscripcion"],
+                "confirmacionAsistencia": result["confirmacionAsistencia"]
+            }
+        else:
+            return {
+                "confirmacionInscripcion": None,
+                "confirmacionAsistencia": None
+            }
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -300,7 +309,6 @@ def torneos_organizador(idUsuario: int):
             conn.close()
 
 #Crear torneo
-
 def convert_torneo(raw: Torneo) -> dict:
     errores = {}
     torneo = {}
@@ -531,7 +539,6 @@ def formatos_juego(id_juego: int):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
-
 #Devolver el número de inscritos en un torneo
 @router.get("/numero_inscritos/{id_torneo}")
 def numero_inscritos(id_torneo: int):
@@ -545,6 +552,200 @@ def numero_inscritos(id_torneo: int):
         """, (id_torneo,))
         numero = cursor.fetchone()[0]
         return {"numero_inscritos": numero}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+            
+#Devolver inscritos en un torneo
+@router.get("/inscritos_torneo/{id_torneo}")
+def inscritos_torneo(id_torneo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                e.idEquipo,
+                e.nombre AS nombreEquipo,
+                ue.idUsuario,
+                u.nombre AS nombreUsuario,
+                u.apellidos AS apellidosUsuario,
+                u.email AS emailUsuario,
+                et.confirmacionInscripcion,
+                et.confirmacionAsistencia
+            FROM Equipo_Torneo et
+            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
+            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
+            INNER JOIN Usuario u ON ue.idUsuario = u.idUsuario
+            WHERE et.idTorneo = %s;
+        """, (id_torneo,))
+        inscritos = cursor.fetchall()
+        return inscritos
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Confirmar inscripción de un equipo en un torneo
+@router.post("/confirmar_inscripcion")
+def confirmar_inscripcion(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET confirmacionInscripcion = 'CONFIRMADA'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+
+        return {"mensaje": "Inscripción confirmada correctamente."}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Confirmar asistencia de un equipo en un torneo
+@router.post("/confirmar_asistencia")
+def confirmar_asistencia(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET confirmacionAsistencia = 'CONFIRMADA'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+
+        return {"mensaje": "Asistencia confirmada correctamente."}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Rechazar inscripción de un equipo en un torneo
+@router.post("/rechazar_inscripcion")
+def rechazar_inscripcion(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET confirmacionInscripcion = 'RECHAZADA'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+
+        return {"mensaje": "Inscripción rechazada correctamente."}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Rechazar asistencia de un equipo en un torneo
+@router.post("/rechazar_asistencia")
+def rechazar_asistencia(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET confirmacionAsistencia = 'RECHAZADA'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+
+        return {"mensaje": "Asistencia rechazada correctamente."}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+#Aceptar inscripción de un equipo en un torneo
+@router.post("/aceptar_inscripcion")
+def aceptar_inscripcion(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET 
+                confirmacionInscripcion = 'CONFIRMADA',
+                confirmacionAsistencia = 'PENDIENTE'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+        return {"mensaje": "Inscripción aceptada de nuevo"}
+    finally:
+        if conn.is_connected():
+            conn.close()
+
+
+#Deshacer confirmación de asistencia de un equipo en un torneo
+@router.post("/deshacer_asistencia")
+def deshacer_asistencia(datos: dict):
+    id_equipo = datos.get("idEquipo")
+    id_torneo = datos.get("idTorneo")
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Equipo_Torneo
+            SET confirmacionAsistencia = 'PENDIENTE'
+            WHERE idEquipo = %s AND idTorneo = %s;
+        """, (id_equipo, id_torneo))
+        conn.commit()
+
+        return {"mensaje": "Asistencia devuelta a pendiente."}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if conn.is_connected():
+            conn.close()
+
+#Comenzar torneo
+@router.post("/comenzar_torneo/{id_torneo}")
+def comenzar_torneo(id_torneo: int):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE Torneo
+            SET estado = 'EN_CURSO'
+            WHERE idTorneo = %s;
+        """, (id_torneo,))
+        conn.commit()
+
+        return {"mensaje": "Torneo comenzado correctamente."}
+
     except Exception as e:
         return {"error": str(e)}
     finally:

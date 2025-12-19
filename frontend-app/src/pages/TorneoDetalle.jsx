@@ -8,7 +8,7 @@ export default function TorneoDetalle() {
     const [usuario, setUsuario] = useState(null);
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
     const [mensaje, setMensaje] = useState("");
-    const [inscrito, setInscrito] = useState(false);
+    const [estadoInscripcion, setEstadoInscripcion] = useState(null);
     const [cargandoInscripcion, setCargandoInscripcion] = useState(true);
     const [error, setError] = useState(null);
     const [procesandoInscripcion, setProcesandoInscripcion] = useState(false);
@@ -41,6 +41,8 @@ export default function TorneoDetalle() {
         checkUser();
     }, [id]);
 
+    const esOrganizador = usuario && torneo && usuario.idUsuario === torneo.idOrganizador;
+
     const checkInscripcion = async (idUsuario, idTorneo) => {
         try {
             const res = await fetch(
@@ -50,8 +52,12 @@ export default function TorneoDetalle() {
             const data = await res.json();
 
             if (!data.error) {
-                setInscrito(data.inscrito);
+                setEstadoInscripcion({
+                    confirmacionInscripcion: data.confirmacionInscripcion,
+                    confirmacionAsistencia: data.confirmacionAsistencia
+                });
             }
+
         } finally {
             setCargandoInscripcion(false);
         }
@@ -80,10 +86,15 @@ export default function TorneoDetalle() {
 
             await new Promise(resolve => setTimeout(resolve, 1200)); // Espera simulada para feedback visual
 
-            if (result.error) setMensaje(result.error);
-            else {
+            if (result.error) {
+                setMensaje(result.error);
+            } else {
                 setMensaje(result.mensaje);
-                setInscrito(true);
+
+                setEstadoInscripcion({
+                    confirmacionInscripcion: "PENDIENTE",
+                    confirmacionAsistencia: "PENDIENTE"
+                });
             }
 
             setMostrarResultado(true);
@@ -100,6 +111,7 @@ export default function TorneoDetalle() {
     if (!torneo)
         return <p className="text-center mt-6 text-[var(--color-text)]">Cargando torneo...</p>;
 
+
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col items-center p-8">
             <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full">
@@ -112,12 +124,24 @@ export default function TorneoDetalle() {
                 <p className="mb-2"><strong>Liga:</strong> {torneo.nombreLiga}</p>
                 <p className="mt-4">{torneo.descripcion}</p>
 
+                {esOrganizador && (
+                    <div className="mt-6 flex justify-center">
+                        <button
+                            onClick={() => navigate(`/torneo/gestion/${slug}`)}
+                            className="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition"
+                        >
+                            ⚙️ Gestionar torneo
+                        </button>
+                    </div>
+                )}
+
+
+
                 <div className="mt-6 flex justify-center">
                     {usuario ? (
-
                         cargandoInscripcion ? (
                             <p className="text-center text-gray-400">Comprobando inscripción...</p>
-                        ) : !inscrito ? (
+                        ) : !estadoInscripcion || estadoInscripcion.confirmacionInscripcion === null ? (
                             !procesandoInscripcion && !mostrarResultado && (
                                 <>
                                     <button
@@ -134,12 +158,19 @@ export default function TorneoDetalle() {
                                     </button>
                                 </>
                             )
+                        ) : estadoInscripcion.confirmacionInscripcion === "RECHAZADA" ? (
+                            <p className="text-center text-red-500 font-semibold">
+                                Se ha rechazado tu inscripción
+                            </p>
+                        ) : estadoInscripcion.confirmacionAsistencia === "RECHAZADA" ? (
+                            <p className="text-center text-orange-500 font-semibold">
+                                No asististe al torneo
+                            </p>
                         ) : (
                             <p className="text-center text-green-400 font-semibold">
                                 ✅ Estás inscrito en este torneo ✅
                             </p>
                         )
-
                     ) : (
                         <button
                             onClick={() => navigate("/login")}
@@ -149,6 +180,7 @@ export default function TorneoDetalle() {
                         </button>
                     )}
                 </div>
+
                 {/**Espera simulada con reloj de arena */}
                 {procesandoInscripcion && (
                     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
