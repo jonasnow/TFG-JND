@@ -4,6 +4,8 @@ import SidebarFilter from "../components/SidebarFilter";
 
 export default function Torneos() {
   const [torneos, setTorneos] = useState([]);
+  const [torneosOriginales, setTorneosOriginales] = useState([]);
+  const [busqueda, setBusqueda] = useState("");
   const [juegos, setJuegos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -26,6 +28,7 @@ export default function Torneos() {
       try {
         const response = await fetch("http://localhost:8000/torneos_vigentes");
         const data = await response.json();
+        setTorneosOriginales(data);
         setTorneos(data);
       } catch (err) {
         setError("Error al cargar torneos");
@@ -33,6 +36,7 @@ export default function Torneos() {
         setCargando(false);
       }
     };
+
 
     const fetchJuegos = async () => {
       try {
@@ -47,6 +51,20 @@ export default function Torneos() {
     fetchTorneos();
     fetchJuegos();
   }, []);
+
+  useEffect(() => {
+    let resultado = torneosOriginales;
+
+    if (busqueda.trim() !== "") {
+      resultado = resultado.filter((torneo) =>
+        torneo.nombre.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+
+    setTorneos(resultado);
+    setPaginaActual(1);
+  }, [busqueda, torneosOriginales]);
+
 
   if (cargando)
     return (
@@ -142,7 +160,7 @@ export default function Torneos() {
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
 
       {/* Contenedor principal debajo del navbar */}
-      <div className="pt-16 px-8"> {/* Ajusta pt según altura navbar */}
+      <div className="pt-16 px-8">
 
         {/* Botón abrir/cerrar sidebar */}
         <button
@@ -161,10 +179,14 @@ export default function Torneos() {
             filtros={filtros}
             setFiltros={setFiltros}
             onBuscar={buscarTorneos}
+            busqueda={busqueda}
+            setBusqueda={setBusqueda}
+            juegos={juegos}
           />
 
+
           {/* Contenido principal */}
-          <div className={`flex-1 transition-all duration-500 ${menuAbierto ? "md:ml-0" : "md:ml-0"} ml-0`}>
+          <div className={`flex-1 transition-all duration-500 ${menuAbierto ? "md:pl-8" : "md:pl-0"} ml-0`}>
             <h1 className="text-3xl font-bold text-center mb-8">Torneos Vigentes</h1>
 
             {botonesPaginacion}

@@ -146,7 +146,16 @@ export default function Perfil() {
   };
 
   if (!user)
-    return <div className="text-center mt-10 text-[var(--color-text)] font-play">No has iniciado sesión.</div>;
+    return <div className="text-center mt-10 text-[var(--color-text)] font-play">No has iniciado sesión.
+      <div>
+        <button
+          onClick={() => navigate(`/login`)}
+          className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+        >
+          Iniciar sesión
+        </button>
+      </div>
+    </div>;
 
   if (error)
     return <div className="text-center mt-10 text-red-600 font-semibold font-play">{error}</div>;

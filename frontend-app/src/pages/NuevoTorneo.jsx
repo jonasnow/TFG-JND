@@ -96,6 +96,14 @@ export default function RegisterTorneo() {
     return (
       <div className="text-center mt-10 text-[var(--color-text)]">
         No has iniciado sesión.
+        <div>
+          <button
+            onClick={() => navigate(`/login`)}
+            className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+          >
+            Iniciar sesión
+          </button></div>
+
       </div>
     );
 

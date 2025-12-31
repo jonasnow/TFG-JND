@@ -121,7 +121,7 @@ export default function TorneoGestion() {
                 setTorneo(torneoData);
 
                 const resNum = await fetch(
-                    `http://localhost:8000/numero_inscritos/${id}`
+                    `http://localhost:8000/comprobar_inscripciones/${id}`
                 );
                 const numData = await resNum.json();
                 setNumInscritos(numData.total);
@@ -285,7 +285,7 @@ export default function TorneoGestion() {
                 </h2>
 
                 <Seccion
-                    titulo={`📥 Solicitudes de inscripción (${solicitudesInscripcion.length})`}
+                    titulo={`Solicitudes de inscripción (${solicitudesInscripcion.length})`}
                     ayuda="Equipos pendientes de aprobar o rechazar su inscripción."
                     abierta={abierto.inscripcion}
                     onToggle={() => toggle("inscripcion")}
@@ -294,7 +294,7 @@ export default function TorneoGestion() {
                 </Seccion>
 
                 <Seccion
-                    titulo={`📝 Gestión de asistencia (${gestionAsistencia.length})`}
+                    titulo={`Gestión de asistencia (${gestionAsistencia.length})`}
                     ayuda="Equipos aceptados que deben confirmar su asistencia."
                     abierta={abierto.asistencia}
                     onToggle={() => toggle("asistencia")}
@@ -303,7 +303,7 @@ export default function TorneoGestion() {
                 </Seccion>
 
                 <Seccion
-                    titulo={`❌ Rechazadas (${rechazados.length})`}
+                    titulo={`Rechazadas (${rechazados.length})`}
                     ayuda="Equipos rechazados que pueden volver a aceptarse."
                     abierta={abierto.rechazados}
                     onToggle={() => toggle("rechazados")}
@@ -312,7 +312,7 @@ export default function TorneoGestion() {
                 </Seccion>
 
                 <Seccion
-                    titulo={`🏆 Participantes (${participantes.length})`}
+                    titulo={`Participantes (${participantes.length})`}
                     ayuda="Equipos que participarán en el torneo."
                     abierta={abierto.participantes}
                     onToggle={() => toggle("participantes")}
@@ -326,7 +326,7 @@ export default function TorneoGestion() {
                                     onClick={comenzarTorneo}
                                     className="bg-[var(--color-primary)] text-white px-6 py-3 rounded-xl"
                                 >
-                                    🚀 Comenzar torneo
+                                Comenzar torneo
                                 </button>
                             </div>
                         )}
