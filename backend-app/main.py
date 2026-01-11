@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, usuarios, torneos, ligas
+from routers import auth, usuarios, torneos, ligas, rondas
 #Instancia
 
 app = FastAPI()
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(usuarios.router)
 app.include_router(torneos.router)
 app.include_router(ligas.router)
+app.include_router(rondas.router)
 
 @app.get("/health")
 def health_check():

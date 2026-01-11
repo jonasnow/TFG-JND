@@ -36,6 +36,7 @@ def listar_torneos_vigentes():
                 t.fechaCreacion,
                 COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
                 j.nombre AS nombreJuego,
+                j.logo AS logoJuego,
                 ft.nombre AS nombreFormatoTorneo,
                 fj.nombre AS nombreFormatoJuego
             FROM Torneo t
@@ -731,23 +732,3 @@ def deshacer_asistencia(datos: dict):
         if conn.is_connected():
             conn.close()
 
-#Comenzar torneo
-@router.post("/comenzar_torneo/{id_torneo}")
-def comenzar_torneo(id_torneo: int):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE Torneo
-            SET estado = 'EN_CURSO'
-            WHERE idTorneo = %s;
-        """, (id_torneo,))
-        conn.commit()
-
-        return {"mensaje": "Torneo comenzado correctamente."}
-
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        if 'conn' in locals() and conn.is_connected():
-            conn.close()

@@ -41,19 +41,19 @@ CREATE TABLE `Enfrentamiento` (
 --
 
 INSERT INTO `Enfrentamiento` (`idEnfrentamiento`, `sitioAsignado`, `numeroRonda`, `resultado`, `marcador`, `idTorneo`) VALUES
-(1, 'Mesa 1', 1, 'Gana Ana', '2-1', 1),
-(2, 'Mesa 2', 1, 'Gana Luis', '2-0', 1),
-(3, 'Mesa 3', 1, 'Gana Carmen', '2-1', 1),
-(4, 'Mesa 4', 1, 'Gana Javier', '2-0', 1),
-(5, 'Mesa 1', 2, 'Gana Marta', '2-0', 1),
-(6, 'Mesa 2', 2, 'Gana Raúl', '2-1', 1),
-(7, 'Mesa 3', 2, 'Gana Elena', '2-1', 1),
-(8, 'Mesa 4', 2, 'Gana Carlos', '2-0', 1),
-(9, 'Mesa 1', 3, 'Gana Ana', '2-0', 1),
-(10, 'Mesa 2', 3, 'Gana Luis', '2-1', 1),
-(11, 'Mesa 3', 3, 'Gana Marta', '2-1', 1),
-(12, 'Mesa 4', 3, 'Gana Raúl', '2-0', 1),
-(13, 'Mesa 1', 1, 'Gana Ana', '2-0', 2),
+(1, 'Mesa 1', 1, 'Gana Admin', '2-1', 3),
+(2, 'Mesa 2', 1, 'Gana Luis', '2-0', 3),
+(3, 'Mesa 3', 1, 'Gana Carmen', '2-1', 3),
+(4, 'Mesa 4', 1, 'Gana Javier', '2-0', 3),
+(5, 'Mesa 1', 2, 'Gana Marta', '2-0', 3),
+(6, 'Mesa 2', 2, 'Gana Raúl', '2-1', 3),
+(7, 'Mesa 3', 2, 'Gana Elena', '2-1', 3),
+(8, 'Mesa 4', 2, 'Gana Carlos', '2-0', 3),
+(9, 'Mesa 1', 3, 'Gana Admin', '2-0', 3),
+(10, 'Mesa 2', 3, 'Gana Luis', '2-1', 3),
+(11, 'Mesa 3', 3, 'Gana Marta', '2-1', 3),
+(12, 'Mesa 4', 3, 'Gana Raúl', '2-0', 3),
+(13, 'Mesa 1', 1, 'Gana Admin', '2-0', 2),
 (14, 'Mesa 2', 1, 'Gana Luis', '2-1', 2),
 (15, 'Mesa 3', 1, 'Gana Marta', '2-0', 2),
 (16, 'Mesa 4', 1, 'Gana Raúl', '2-1', 2),
@@ -61,7 +61,7 @@ INSERT INTO `Enfrentamiento` (`idEnfrentamiento`, `sitioAsignado`, `numeroRonda`
 (18, 'Mesa 2', 2, 'Gana Carlos', '2-0', 2),
 (19, 'Mesa 3', 2, 'Gana Javier', '2-1', 2),
 (20, 'Mesa 4', 2, 'Gana Carmen', '2-0', 2),
-(21, 'Mesa 1', 3, 'Gana Ana', '2-1', 2),
+(21, 'Mesa 1', 3, 'Gana Admin', '2-1', 2),
 (22, 'Mesa 2', 3, 'Gana Luis', '2-0', 2),
 (23, 'Mesa 3', 3, 'Gana Raúl', '2-1', 2),
 (24, 'Mesa 4', 3, 'Gana Marta', '2-0', 2);
@@ -82,7 +82,7 @@ CREATE TABLE `Equipo` (
 --
 
 INSERT INTO `Equipo` (`idEquipo`, `nombre`) VALUES
-(1, 'Ana Gómez Ruiz'),
+(1, 'Admin Istrador'),
 (2, 'Luis Martínez López'),
 (3, 'Carmen Santos Díaz'),
 (4, 'Javier Morales Pérez'),
@@ -272,7 +272,10 @@ CREATE TABLE `FormatoTorneo` (
 --
 
 INSERT INTO `FormatoTorneo` (`idFormatoTorneo`, `nombre`) VALUES
-(1, 'Suizo');
+(1, 'Free-for-All'),
+(2, 'Eliminación Directa'),
+(3, 'Round Robin'),
+(4, 'Suizo');
 
 -- --------------------------------------------------------
 
@@ -284,25 +287,27 @@ CREATE TABLE `Juego` (
   `idJuego` int NOT NULL,
   `nombre` varchar(100) NOT NULL,
   `categoria` varchar(100) NOT NULL,
-  `descripcion` text
+  `descripcion` text,
+  `logo` VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Volcado de datos para la tabla `Juego`
 --
 
-INSERT INTO `Juego` (`idJuego`, `nombre`, `categoria`, `descripcion`) VALUES
-(1, 'Magic: The Gathering', 'TCG', 'Juego de cartas coleccionables competitivo de fantasía de Wizards of the Coast.'),
-(2, 'Pokémon TCG', 'TCG', 'Juego de cartas coleccionables basado en el universo Pokémon.'),
-(3, 'Yu-Gi-Oh!', 'TCG', 'Famoso juego de cartas coleccionables con invocaciones y duelos estratégicos.'),
-(4, 'Flesh and Blood', 'TCG', 'Juego de cartas coleccionables centrado en combates uno contra uno.'),
-(5, 'One Piece TCG', 'TCG', 'TCG competitivo basado en la serie One Piece.'),
-(6, 'Lorcana', 'TCG', 'TCG coleccionable inspirado en personajes del universo Disney.'),
-(7, 'Star Wars Unlimited', 'TCG', 'TCG de ritmo rápido ambientado en el universo Star Wars.'),
-(8, 'Los Colonos de Catán', 'Juego de mesa', 'Clásico juego de estrategia donde los jugadores colonizan y comercian en una isla.'),
-(9, 'Jungle Speed', 'Juego de mesa', 'Juego de reflejos y rapidez con un tótem central.'),
-(10, 'Virus', 'Juego de mesa', 'Juego de cartas rápido y divertido donde debes evitar infectarte.'),
-(11, 'Dominion', 'Juego de mesa', 'Juego de construcción de mazos pionero en su género.');
+INSERT INTO `Juego` (`idJuego`, `nombre`, `categoria`, `descripcion`, `logo`) VALUES
+(1, 'Magic: The Gathering', 'TCG', 'Juego de cartas coleccionables competitivo de fantasía de Wizards of the Coast.', '/init/logos/magic-the-gathering.png'),
+(2, 'Pokémon TCG', 'TCG', 'Juego de cartas coleccionables basado en el universo Pokémon.', '/init/logos/pokemon-tcg.png'),
+(3, 'Yu-Gi-Oh!', 'TCG', 'Famoso juego de cartas coleccionables con invocaciones y duelos estratégicos.', '/init/logos/yugioh.png'),
+(4, 'Flesh and Blood', 'TCG', 'Juego de cartas coleccionables centrado en combates uno contra uno.', '/init/logos/flesh-and-blood.png'),
+(5, 'One Piece TCG', 'TCG', 'TCG competitivo basado en la serie One Piece.', '/init/logos/one-piece.png'),
+(6, 'Lorcana', 'TCG', 'TCG coleccionable inspirado en personajes del universo Disney.', '/init/logos/lorcana.png'),
+(7, 'Star Wars Unlimited', 'TCG', 'TCG de ritmo rápido ambientado en el universo Star Wars.', '/init/logos/star-wars-unlimited.png'),
+(8, 'Los Colonos de Catán', 'Juego de mesa', 'Clásico juego de estrategia donde los jugadores colonizan y comercian en una isla.', '/init/logos/catan.png'),
+(9, 'Jungle Speed', 'Juego de mesa', 'Juego de reflejos y rapidez con un tótem central.', '/init/logos/jungle-speed.png'),
+(10, 'Virus', 'Juego de mesa', 'Juego de cartas rápido y divertido donde debes evitar infectarte.', '/init/logos/virus.png'),
+(11, 'Dominion', 'Juego de mesa', 'Juego de construcción de mazos pionero en su género.', '/init/logos/dominion.png');
+
 
 -- --------------------------------------------------------
 
@@ -361,10 +366,8 @@ CREATE TABLE `Torneo` (
 
 INSERT INTO `Torneo` 
 (`idTorneo`, `idOrganizador`, `idLiga`, `nombre`, `descripcion`, `precioInscripcion`, `numeroRondas`, `duracionRondas`, `fechaHoraInicio`, `lugarCelebracion`, `plazasMax`, `estado`, `premios`, `idFormatoTorneo`, `idJuego`, `idFormatoJuego`, `fechaCreacion`) VALUES
-
-(1, 1, NULL, 'Magic Autumn Cup', 'Torneo Magic formato Modern', 12.0, 5, 50, '2025-09-15 10:00:00', 'Centro Cultural A', 32, 'FINALIZADO', 'Sobres + Trofeo', 1, 1, 4, '2025-10-19 00:00:00'),
+(1, 1, NULL, 'Torneo Eterno', 'Torneo sobre el que hacer pruebas', 1.0, 4, 50, '2027-01-01 08:00:00', 'Lugar celebración', 32, 'PLANIFICADO', 'Premio', 1, 1, 4, '2025-10-19 00:00:00'),
 (2, 2, NULL, 'Yu-Gi-Oh! Old School Duel', 'Torneo formato Goat', 10.0, 4, 40, '2025-10-12 17:00:00', 'Sala de Juegos B', 24, 'FINALIZADO', 'Cartas promocionales', 1, 3, 8, '2025-10-19 00:01:00'),
-
 (3, 3, NULL, 'Magic Winter Draft', 'Torneo formato Draft', 15.0, 3, 45, '2025-12-10 18:00:00', 'Club Recreativo C', 16, 'PLANIFICADO', 'Sobres Draft', 1, 1, 1, '2025-10-19 00:02:00'),
 (4, 4, NULL, 'Magic Pioneer Showdown', 'Competitivo formato Pioneer', 20.0, 5, 55, '2026-01-20 10:00:00', 'Sala D', 32, 'PLANIFICADO', 'Trofeo + sobres', 1, 1, 5, '2025-10-19 00:03:00'),
 (5, 5, NULL, 'Pokémon League Challenge', 'Torneo estándar', 10.0, 4, 40, '2026-02-14 10:00:00', 'Centro E', 32, 'PLANIFICADO', 'Cartas de Liga', 1, 2, 14, '2025-10-19 00:04:00'),
@@ -406,7 +409,7 @@ CREATE TABLE `Usuario` (
 --
 
 INSERT INTO `Usuario` (`idUsuario`, `nombre`, `apellidos`, `localidad`, `email`, `password_hash`, `telefono`, `fechaRegistro`) VALUES
-(1, 'Ana', 'Gómez Ruiz', 'Madrid', 'ana@example.com', '$2b$12$ePczClYgGmgbOsm4YPv7LOOtPLfky.QkoAbBpt0AVy3xdNdywk3CS', '600111111', '2025-10-19 00:00:00'),
+(1, 'Admin', 'Istrador', 'Local', 'admin@example.com', '$2b$12$SwB7Nn0zSvHEeh9bsm7vl.24T2lCoaNb0QXhoVBaPJkzGy1.06cqO', '0', '2025-10-19 00:00:00'),
 (2, 'Luis', 'Martínez López', 'Madrid', 'luis@example.com', '$2b$12$94r1E98Ds6V9S2HAP9LNGeP/In7yF8VfH9fuW2OF3CncaVk1jqR7m', '600222222', '2025-10-19 00:00:00'),
 (3, 'Carmen', 'Santos Díaz', 'Madrid', 'carmen@example.com', '$2b$12$zuKk88Omgzxf964hdFJmsOdfR6XIVxgv/yUcLU4wtBNie.KAHejU.', '600333333', '2025-10-19 00:00:00'),
 (4, 'Javier', 'Morales Pérez', 'Madrid', 'javier@example.com', '$2b$12$Otwy4MSvfWmGRdIkyQoG5usUrOIgYtKuPt59eyItuNua2HV/.cb3e', '600444444', '2025-10-19 00:00:00'),

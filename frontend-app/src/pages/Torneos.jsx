@@ -199,12 +199,23 @@ export default function Torneos() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                 {torneosActuales.map((torneo) => (
                   <div key={torneo.idTorneo} className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-6 flex flex-col justify-between">
+                    <div className="flex justify-between items-start gap-4 mb-4">
+                      <h2 className="text-xl font-semibold flex-1">
+                        {torneo.nombre}
+                      </h2>
+                      <div className="w-[80px] h-[80px] flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-inner">
+                        <img
+                          src={torneo.logoJuego}
+                          alt={torneo.nombreJuego}
+                          className="w-full h-full object-contain p-2"
+                        />
+                      </div>
+                    </div>
                     <div>
-                      <h2 className="text-xl font-semibold mb-2">{torneo.nombre}</h2>
-                      <p className="text-[var(--color-text)] text-sm mb-2">{torneo.lugarCelebracion}</p>
+                      <p className="text-[var(--color-text)] text-sm mb-2">{"En " + torneo.lugarCelebracion}</p>
                       <p className="text-gray-500 text-sm mb-4">{new Date(torneo.fechaHoraInicio).toLocaleString() + " hora local"}</p>
-                      <p className="text-[var(--color-text)] mb-4">{torneo.juego}</p>
-                      <p className="text-[var(--color-text)] mb-4">{torneo.precioInscripcion + "€"}</p>
+                      <p className="text-[var(--color-text)] mb-4">{torneo.nombreJuego}</p>
+                      <p className="text-[var(--color-text)] mb-4">{"Precio inscripción: " + torneo.precioInscripcion + "€"}</p>
                     </div>
                     <button
                       onClick={() =>
