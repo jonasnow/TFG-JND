@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function RegisterTorneo() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [juegos, setJuegos] = useState([]);
   const [formatosTorneo, setFormatosTorneo] = useState([]);
@@ -36,7 +37,7 @@ export default function RegisterTorneo() {
     idFormatoJuego: "",
   });
 
-  // Cargar juegos, formatos base y ligas
+  //Cargar juegos, formatos base y ligas
   useEffect(() => {
     const inicializar = async () => {
       if (!user?.email) {
@@ -98,7 +99,11 @@ export default function RegisterTorneo() {
         No has iniciado sesión.
         <div>
           <button
-            onClick={() => navigate(`/login`)}
+            onClick={() =>
+              navigate("/login", {
+                state: { from: location.pathname }
+              })
+            }
             className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
           >
             Iniciar sesión
@@ -128,7 +133,7 @@ export default function RegisterTorneo() {
       setFormData((prev) => ({
         ...prev,
         idJuego: value,
-        idFormatoJuego: "", // Reset formato juego al cambiar juego
+        idFormatoJuego: "", //Reset formato juego al cambiar juego
       }));
       return;
     }

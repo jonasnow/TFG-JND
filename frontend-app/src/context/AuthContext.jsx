@@ -7,20 +7,40 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:8000/me", {
-      credentials: "include",
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.error) {
-          setUser({ nombre: data.usuario, email: data.email, idUsuario: data.idUsuario });
-        } else {
+    const fetchMe = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/me", {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
           setUser(null);
+          return;
         }
-      })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+
+        const data = await res.json();
+
+        if (!data || !data.usuario || !data.idUsuario) {
+          setUser(null);
+          return;
+        }
+
+        setUser({
+          nombre: data.usuario,
+          email: data.email,
+          idUsuario: data.idUsuario,
+        });
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMe();
   }, []);
+
+
 
   const logout = async () => {
     await fetch("http://localhost:8000/logout", {

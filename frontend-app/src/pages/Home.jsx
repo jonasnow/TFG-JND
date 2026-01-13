@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
 
     return (
         <div
@@ -14,8 +14,13 @@ export default function Home() {
             "
         >
             <h1 className="text-3xl font-bold mb-8">
-                Bienvenido a Gestorneos{user ? `, ${user.nombre}` : ""}
+                {loading
+                    ? "Bienvenido a Gestorneos"
+                    : user
+                        ? `Bienvenido a Gestorneos, ${user.nombre}`
+                        : "Bienvenido a Gestorneos"}
             </h1>
+
 
             {!user && (
                 <div className="space-x-4">

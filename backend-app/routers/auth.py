@@ -36,7 +36,7 @@ def login(datos: LoginData, response: Response):
 
         response.set_cookie(
             key="access_token", value=access_token,
-            httponly=True, secure=True, # En producción, esto debería ser True
+            httponly=True, secure=True, #En producción, esto debería ser True
             samesite="Lax", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
 

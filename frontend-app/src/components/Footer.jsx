@@ -8,6 +8,7 @@ export default function Footer() {
             }}
         >
             Trabajo fin de grado 👑 Gestorneos 👑 2025-2026
+            Las marcas y logotipos utilizados son propiedad de sus respectivos dueños.
         </footer>
     );
 }

@@ -34,3 +34,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-play);
 }
+
+button {
+  cursor: pointer;
+}

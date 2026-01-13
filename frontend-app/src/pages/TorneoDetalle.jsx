@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 export default function TorneoDetalle() {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [torneo, setTorneo] = useState(null);
     const [usuario, setUsuario] = useState(null);
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
@@ -84,7 +85,7 @@ export default function TorneoDetalle() {
 
             const result = await response.json();
 
-            await new Promise(resolve => setTimeout(resolve, 1200)); // Espera simulada para feedback visual
+            await new Promise(resolve => setTimeout(resolve, 1200));
 
             if (result.error) {
                 setMensaje(result.error);
@@ -127,11 +128,18 @@ export default function TorneoDetalle() {
                 {esOrganizador && (
                     <div className="mt-6 flex justify-center">
                         <button
-                            onClick={() => navigate(`/torneo/gestion/${slug}`)}
+                            onClick={() => {
+                                if (torneo.estado === "EN_CURSO") {
+                                    navigate(`/torneo/${slug}/en-curso`);
+                                } else {
+                                    navigate(`/torneo/gestion/${slug}`);
+                                }
+                            }}
                             className="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition"
                         >
                             ⚙️ Gestionar torneo
                         </button>
+
                     </div>
                 )}
 
@@ -173,7 +181,11 @@ export default function TorneoDetalle() {
                         )
                     ) : (
                         <button
-                            onClick={() => navigate("/login")}
+                            onClick={() =>
+                                navigate("/login", {
+                                    state: { from: location.pathname }
+                                })
+                            }
                             className="bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)] transition"
                         >
                             Iniciar sesión para registro
@@ -181,7 +193,7 @@ export default function TorneoDetalle() {
                     )}
                 </div>
 
-                {/**Espera simulada con reloj de arena */}
+
                 {procesandoInscripcion && (
                     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
                         <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-72 text-center">

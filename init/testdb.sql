@@ -37,38 +37,6 @@ CREATE TABLE `Enfrentamiento` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Volcado de datos para la tabla `Enfrentamiento`
---
-
-INSERT INTO `Enfrentamiento` (`idEnfrentamiento`, `sitioAsignado`, `numeroRonda`, `resultado`, `marcador`, `idTorneo`) VALUES
-(1, 'Mesa 1', 1, 'Gana Admin', '2-1', 3),
-(2, 'Mesa 2', 1, 'Gana Luis', '2-0', 3),
-(3, 'Mesa 3', 1, 'Gana Carmen', '2-1', 3),
-(4, 'Mesa 4', 1, 'Gana Javier', '2-0', 3),
-(5, 'Mesa 1', 2, 'Gana Marta', '2-0', 3),
-(6, 'Mesa 2', 2, 'Gana Raúl', '2-1', 3),
-(7, 'Mesa 3', 2, 'Gana Elena', '2-1', 3),
-(8, 'Mesa 4', 2, 'Gana Carlos', '2-0', 3),
-(9, 'Mesa 1', 3, 'Gana Admin', '2-0', 3),
-(10, 'Mesa 2', 3, 'Gana Luis', '2-1', 3),
-(11, 'Mesa 3', 3, 'Gana Marta', '2-1', 3),
-(12, 'Mesa 4', 3, 'Gana Raúl', '2-0', 3),
-(13, 'Mesa 1', 1, 'Gana Admin', '2-0', 2),
-(14, 'Mesa 2', 1, 'Gana Luis', '2-1', 2),
-(15, 'Mesa 3', 1, 'Gana Marta', '2-0', 2),
-(16, 'Mesa 4', 1, 'Gana Raúl', '2-1', 2),
-(17, 'Mesa 1', 2, 'Gana Elena', '2-0', 2),
-(18, 'Mesa 2', 2, 'Gana Carlos', '2-0', 2),
-(19, 'Mesa 3', 2, 'Gana Javier', '2-1', 2),
-(20, 'Mesa 4', 2, 'Gana Carmen', '2-0', 2),
-(21, 'Mesa 1', 3, 'Gana Admin', '2-1', 2),
-(22, 'Mesa 2', 3, 'Gana Luis', '2-0', 2),
-(23, 'Mesa 3', 3, 'Gana Raúl', '2-1', 2),
-(24, 'Mesa 4', 3, 'Gana Marta', '2-0', 2);
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `Equipo`
 --
 
@@ -332,7 +300,7 @@ CREATE TABLE `Liga` (
 --
 
 INSERT INTO `Liga` (`idLiga`, `nombre`, `idOrganizador`, `numeroParticipantesMax`, `numeroTorneos`, `fechaInicio`, `fechaFin`, `numeroTorneosObligatorios`, `fechaCreacion`) VALUES
-(1, 'Liga Magic Noviembre 2025', 1, 8, 2, '2025-07-01', '2025-07-31', 1, '2025-10-19 00:16:00');
+(1, 'Liga Magic Noviembre 2025', 1, 8, 2, '2025-11-01', '2025-11-30', 1, '2025-10-19 00:16:00');
 
 -- --------------------------------------------------------
 
@@ -555,19 +523,19 @@ ALTER TABLE `Equipo`
 -- AUTO_INCREMENT de la tabla `FormatoJuego`
 --
 ALTER TABLE `FormatoJuego`
-  MODIFY `idFormatoJuego` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `idFormatoJuego` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT de la tabla `FormatoTorneo`
 --
 ALTER TABLE `FormatoTorneo`
-  MODIFY `idFormatoTorneo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `idFormatoTorneo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `Juego`
 --
 ALTER TABLE `Juego`
-  MODIFY `idJuego` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `idJuego` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `Liga`
@@ -579,7 +547,7 @@ ALTER TABLE `Liga`
 -- AUTO_INCREMENT de la tabla `Torneo`
 --
 ALTER TABLE `Torneo`
-  MODIFY `idTorneo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `idTorneo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT de la tabla `Usuario`

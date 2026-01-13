@@ -20,7 +20,8 @@ def listar_usuarios():
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
-# Crear usuario con mensajes distintos para email y teléfono
+            
+#Crear usuario con mensajes distintos para email y teléfono
 @router.post("/register")
 def crear_usuario(usuario: Usuario):
     try:

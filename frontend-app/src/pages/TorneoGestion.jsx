@@ -1,18 +1,23 @@
 import { useEffect, useState, Children } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { TickIcon, CruzIcon, UndoIcon } from "../components/icons/Icons";
+import { useAuth } from "../context/AuthContext";
 
 export default function TorneoGestion() {
     const { slug } = useParams();
+    const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const id = slug ? Number(slug.split("-").pop()) : null;
 
     const [torneo, setTorneo] = useState(null);
-    const [usuario, setUsuario] = useState(null);
     const [inscritos, setInscritos] = useState([]);
-    const [numInscritos, setNumInscritos] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
+    const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+    const [procesandoInicio, setProcesandoInicio] = useState(false);
+    const [errorInicio, setErrorInicio] = useState(null);
+
     const [abierto, setAbierto] = useState({
         inscripcion: true,
         asistencia: true,
@@ -20,7 +25,7 @@ export default function TorneoGestion() {
         participantes: true,
     });
 
-        //FILTROS
+    //FILTROS
     const solicitudesInscripcion = inscritos.filter(
         (i) => i.confirmacionInscripcion === "PENDIENTE"
     );
@@ -76,9 +81,7 @@ export default function TorneoGestion() {
 
             {abierta && (
                 <div className="p-4 max-h-72 overflow-y-auto">
-                    {Children.count(children) > 0 ? (
-                        children
-                    ) : (
+                    {children || (
                         <p className="text-sm text-gray-500">
                             No hay elementos
                         </p>
@@ -87,14 +90,13 @@ export default function TorneoGestion() {
             )}
         </div>
     );
-    
-    //VALIDACIÓN ID
+    //Validar gestor
     useEffect(() => {
-        if (!id) {
-            setError("ID de torneo inválido");
-            setCargando(false);
+        if (!authLoading && !user) {
+            navigate("/login", { replace: true, state: { from: location.pathname } });
         }
-    }, [id]);
+    }, [user, authLoading, navigate]);
+
 
     const toggle = (key) =>
         setAbierto((prev) => ({
@@ -104,27 +106,20 @@ export default function TorneoGestion() {
 
     //CARGA INICIAL
     useEffect(() => {
-        if (!id) return;
-
+        if (!id) {
+            return (
+                <p className="text-center mt-6 text-red-500">
+                    ID de torneo inválido
+                </p>
+            );
+        }
         const fetchData = async () => {
             try {
-                const resUser = await fetch("http://localhost:8000/me", {
-                    credentials: "include",
-                });
-                const userData = await resUser.json();
-                setUsuario(userData);
-
                 const resTorneo = await fetch(
                     `http://localhost:8000/torneo/${id}`
                 );
                 const torneoData = await resTorneo.json();
                 setTorneo(torneoData);
-
-                const resNum = await fetch(
-                    `http://localhost:8000/comprobar_inscripciones/${id}`
-                );
-                const numData = await resNum.json();
-                setNumInscritos(numData.total);
 
                 const resInscritos = await fetch(
                     `http://localhost:8000/inscritos_torneo/${id}`
@@ -142,13 +137,12 @@ export default function TorneoGestion() {
     }, [id]);
 
     const esOrganizador =
-        usuario && torneo && usuario.idUsuario === torneo.idOrganizador;
-
+        user && torneo && user.idUsuario === torneo.idOrganizador;
     useEffect(() => {
-        if (!cargando && usuario && torneo && !esOrganizador) {
+        if (!cargando && user && torneo && !esOrganizador) {
             navigate(`/torneo/${slug}`);
         }
-    }, [cargando, usuario, torneo, esOrganizador, navigate, slug]);
+    }, [cargando, user, torneo, esOrganizador, navigate, slug]);
 
     if (cargando) {
         return <p className="text-center mt-6">Cargando gestión del torneo...</p>;
@@ -202,22 +196,63 @@ export default function TorneoGestion() {
         postAccion("deshacer_asistencia", idEquipo);
 
     //COMENZAR TORNEO
-    const todasAsistenciasConfirmadas =
-        participantes.length > 0 &&
-        participantes.every(
-            (i) => i.confirmacionAsistencia === "CONFIRMADA"
-        );
 
-    const comenzarTorneo = async () => {
-        await fetch("http://localhost:8000/comenzar_torneo", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ idTorneo: id }),
-        });
 
-        navigate(`/torneo/${slug}/en-curso`);
+    const inicioValido = participantes.length > 0;
+
+
+    const iniciarTorneo = async () => {
+        setProcesandoInicio(true);
+        setErrorInicio(null);
+
+        try {
+            const resValidacion = await fetch(
+                `http://localhost:8000/validacion_inicial_torneo/${id}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                }
+            );
+
+            const validacion = await resValidacion.json();
+
+            if (!validacion.ok) {
+                setErrorInicio(
+                    validacion.motivo || "Error al validar el torneo"
+                );
+                setProcesandoInicio(false);
+                return;
+            }
+
+            const resComenzar = await fetch(
+                `http://localhost:8000/comenzar_torneo/${id}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                }
+            );
+
+            const comenzarData = await resComenzar.json();
+
+            if (!resComenzar.ok || comenzarData.error) {
+                setErrorInicio(
+                    comenzarData.error || "Error al iniciar el torneo"
+                );
+                setProcesandoInicio(false);
+                return;
+            }
+
+            navigate(`/torneo/${slug}/en-curso`);
+        } catch (e) {
+            setErrorInicio("Error de conexión con el servidor");
+        } finally {
+            setProcesandoInicio(false);
+            setMostrarConfirmacion(false);
+        }
     };
+
 
     //RENDERS
     const renderGestionInscripcion = (eq) => (
@@ -278,7 +313,7 @@ export default function TorneoGestion() {
                 <p><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
                 <p><strong>Inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()}</p>
                 <p><strong>Juego:</strong> {torneo.nombreJuego}</p>
-                <p><strong>Inscritos:</strong> {numInscritos}</p>
+                <p><strong>Inscritos:</strong> {inscritos.length}</p>
 
                 <h2 className="text-2xl font-semibold mt-6 mb-4">
                     Gestión de participantes
@@ -320,16 +355,61 @@ export default function TorneoGestion() {
                     {participantes.map(renderParticipante)}
 
                     {participantes.length > 0 &&
-                        todasAsistenciasConfirmadas && (
+                        inicioValido && (
                             <div className="mt-4 text-center">
                                 <button
-                                    onClick={comenzarTorneo}
+                                    onClick={() => setMostrarConfirmacion(true)}
                                     className="bg-[var(--color-primary)] text-white px-6 py-3 rounded-xl"
                                 >
-                                Comenzar torneo
+                                    Comenzar torneo
                                 </button>
                             </div>
                         )}
+                    {mostrarConfirmacion && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-96">
+                                <h2 className="text-xl font-semibold mb-4 text-center">
+                                    Iniciar torneo
+                                </h2>
+                                <p className="text-center mb-4">
+                                    Se va a poner en marcha el torneo <strong>{torneo.nombre}</strong>.
+                                    <br />
+                                    ¿Estás seguro?
+                                </p>
+
+                                {errorInicio && (
+                                    <p className="text-red-500 text-sm text-center mb-3">
+                                        {errorInicio}
+                                    </p>
+                                )}
+
+                                <div className="flex justify-center space-x-4">
+                                    <button
+                                        onClick={iniciarTorneo}
+                                        className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg"
+                                    >
+                                        Confirmar
+                                    </button>
+                                    <button
+                                        onClick={() => setMostrarConfirmacion(false)}
+                                        className="bg-gray-400 text-white px-4 py-2 rounded-lg"
+                                    >
+                                        Atrás
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {procesandoInicio && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-72 text-center">
+                                <div className="animate-pulse text-4xl mb-3">⏳</div>
+                                <p>Validando y comenzando el torneo…</p>
+                            </div>
+                        </div>
+                    )}
+
+
                 </Seccion>
             </div>
         </div>

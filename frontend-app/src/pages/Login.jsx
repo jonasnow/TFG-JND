@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { loginUser } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const from = location.state?.from || "/";
+
     const { setUser } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -26,7 +30,7 @@ export default function Login() {
                     idUsuario: meData.idUsuario
                 });
             }
-            navigate("/");
+            navigate(from, { replace: true });
         } else {
             setError(result.error || "Error al iniciar sesión");
         }

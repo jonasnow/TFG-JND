@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
 export default function SidebarFilter({ abierto, filtros, setFiltros, onBuscar, busqueda, setBusqueda, juegos }) {
   const [busquedaJuego, setBusquedaJuego] = useState("");
   const [mostrarJuegos, setMostrarJuegos] = useState(false);
+  
+  const contenedorRef = useRef(null);
 
   const juegosFiltrados = juegos.filter((juego) =>
     juego.nombre.toLowerCase().includes(busquedaJuego.toLowerCase())
   );
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contenedorRef.current && !contenedorRef.current.contains(event.target)) {
+        setMostrarJuegos(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div
@@ -38,7 +50,6 @@ export default function SidebarFilter({ abierto, filtros, setFiltros, onBuscar, 
             onChange={(e) => setBusqueda(e.target.value)}
             className="w-full p-2 rounded bg-[var(--color-bg)] text-[var(--color-text)]"
           />
-          <h2 className="text-lg font-bold mb-4">Filtros</h2>
 
           <label className="text-sm text-gray-500">Precio mínimo</label>
           <input
@@ -76,13 +87,14 @@ export default function SidebarFilter({ abierto, filtros, setFiltros, onBuscar, 
           />
           <label className="text-sm text-gray-500">Juego</label>
 
-          <div className="relative">
+          <div className="relative" ref={contenedorRef}>
             <input
               type="text"
               placeholder="Buscar juego..."
               value={busquedaJuego}
               onChange={(e) => {
                 setBusquedaJuego(e.target.value);
+                setFiltros({ ...filtros, juego: value === "" ? "" : filtros.juego });
                 setMostrarJuegos(true);
               }}
               onFocus={() => setMostrarJuegos(true)}

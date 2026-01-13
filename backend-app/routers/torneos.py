@@ -61,7 +61,6 @@ def listar_torneos_filtrados(filtros: FiltroTorneos):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Base query
         query = """
             SELECT 
                 t.idTorneo,
@@ -83,6 +82,7 @@ def listar_torneos_filtrados(filtros: FiltroTorneos):
                 t.fechaCreacion,
                 COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
                 j.nombre AS nombreJuego,
+                j.logo AS logoJuego,
                 ft.nombre AS nombreFormatoTorneo,
                 fj.nombre AS nombreFormatoJuego
             FROM Torneo t
@@ -95,7 +95,6 @@ def listar_torneos_filtrados(filtros: FiltroTorneos):
 
         params = []
 
-        # Filtros dinámicos
         if filtros.precio_min is not None:
             query += " AND t.precioInscripcion >= %s"
             params.append(filtros.precio_min)
@@ -250,7 +249,7 @@ def torneos_usuario(idUsuario: int):
 def usuario_inscrito(idUsuario: int, idTorneo: int):
     try:
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)  # Devuelve dict en lugar de tupla
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("""SELECT et.confirmacionInscripcion, et.confirmacionAsistencia
                        FROM Equipo_Torneo et
                        INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
@@ -314,7 +313,7 @@ def convert_torneo(raw: Torneo) -> dict:
     errores = {}
     torneo = {}
 
-    # Campos numéricos
+    #Campos numéricos
     numeric_fields = [
         "idOrganizador", "idLiga", "precioInscripcion", "numeroRondas",
         "duracionRondas", "plazasMax", "idFormatoTorneo", "idJuego", "idFormatoJuego"
@@ -333,12 +332,12 @@ def convert_torneo(raw: Torneo) -> dict:
                 except ValueError:
                     errores[field] = "Debe ser un número válido"
 
-    # Campos de texto
+    #Campos de texto
     texto_fields = ["nombre", "descripcion", "lugarCelebracion", "estado", "premios"]
     for field in texto_fields:
         torneo[field] = getattr(raw, field) or ""
 
-    # Fecha y hora
+    #Fecha y hora
     raw_fecha = getattr(raw, "fechaHoraInicio", None)
     if isinstance(raw_fecha, str) and raw_fecha:
         for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
@@ -350,7 +349,7 @@ def convert_torneo(raw: Torneo) -> dict:
         if torneo["fechaHoraInicio"] is None:
             errores["fechaHoraInicio"] = "Fecha y hora inválida"
         else:
-            # Formatear para la base de datos
+            #Formatear para la base de datos
             torneo["fechaHoraInicio"] = torneo["fechaHoraInicio"].strftime("%Y-%m-%d %H:%M:%S")
     else:
         torneo["fechaHoraInicio"] = None
@@ -440,7 +439,6 @@ def eliminar_equipo_torneo(id_torneo: int, id_equipo: int):
         if existe == 0:
             return {"eliminado": False, "motivo": "No estaba inscrito"}
         else:
-        # Eliminar el registro del equipo en el torneo
             cursor.execute("""
                 DELETE FROM Equipo_Torneo
                 WHERE idTorneo = %s AND idEquipo = %s;
@@ -480,7 +478,6 @@ def comprobar_inscripciones(id_torneo: int):
         """, (id_torneo,))
         confirmados = cursor.fetchone()['confirmados']
 
-        # Comprobar si todos están confirmados
         if confirmados == total:
             return {"todas_confirmadas": True}
         else:

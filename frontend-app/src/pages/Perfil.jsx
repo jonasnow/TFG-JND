@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Perfil() {
@@ -14,6 +14,7 @@ export default function Perfil() {
   const torneosPorPagina = 12;
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!user?.email) {
@@ -51,7 +52,7 @@ export default function Perfil() {
     fetchData();
   }, [user]);
 
-  // Cambiar de página y subir arriba
+  //Cambiar de página y subir arriba
   const cambiarPagina = (num) => {
     setPaginaActual(num);
     setTimeout(() => {
@@ -149,7 +150,11 @@ export default function Perfil() {
     return <div className="text-center mt-10 text-[var(--color-text)] font-play">No has iniciado sesión.
       <div>
         <button
-          onClick={() => navigate(`/login`)}
+          onClick={() =>
+            navigate("/login", {
+              state: { from: location.pathname }
+            })
+          }
           className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
         >
           Iniciar sesión

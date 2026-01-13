@@ -4,7 +4,7 @@ import { useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -43,7 +43,7 @@ export default function Navbar() {
       </div>
 
       <div className="flex gap-4 items-center">
-        {user ? (
+        {loading ? null : user ? (
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -51,6 +51,7 @@ export default function Navbar() {
             >
               {user.nombre}
             </button>
+
             {menuOpen && (
               <div className="absolute right-0 mt-2 bg-[var(--color-bg)] text-[var(--color-text)] rounded shadow-lg w-36">
                 <button
@@ -64,19 +65,15 @@ export default function Navbar() {
           </div>
         ) : (
           <div>
-            <Link to="/register"
-              className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors"
-            >
+            <Link to="/register" className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
               Crear una cuenta
             </Link>
-            <Link
-              to="/login"
-              className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors"
-            >
+            <Link to="/login" className="px-3 py-1 rounded text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
               Iniciar sesión
             </Link>
           </div>
         )}
+
         <ThemeToggle />
       </div>
     </nav>

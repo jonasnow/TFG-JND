@@ -159,10 +159,8 @@ export default function Torneos() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
 
-      {/* Contenedor principal debajo del navbar */}
       <div className="pt-16 px-8">
 
-        {/* Botón abrir/cerrar sidebar */}
         <button
           className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg mb-6"
           onClick={() => setMenuAbierto(!menuAbierto)}
@@ -170,10 +168,8 @@ export default function Torneos() {
           🔍 Buscar
         </button>
 
-        {/* Layout lateral */}
         <div className="flex transition-all duration-300">
 
-          {/* Sidebar que empuja contenido */}
           <SidebarFilter
             abierto={menuAbierto}
             filtros={filtros}
@@ -185,7 +181,6 @@ export default function Torneos() {
           />
 
 
-          {/* Contenido principal */}
           <div className={`flex-1 transition-all duration-500 ${menuAbierto ? "md:pl-8" : "md:pl-0"} ml-0`}>
             <h1 className="text-3xl font-bold text-center mb-8">Torneos Vigentes</h1>
 
