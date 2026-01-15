@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-
 export default function SidebarFilter({ abierto, filtros, setFiltros, onBuscar, busqueda, setBusqueda, juegos }) {
   const [busquedaJuego, setBusquedaJuego] = useState("");
   const [mostrarJuegos, setMostrarJuegos] = useState(false);
-  
+
   const contenedorRef = useRef(null);
 
   const juegosFiltrados = juegos.filter((juego) =>
@@ -93,10 +92,16 @@ export default function SidebarFilter({ abierto, filtros, setFiltros, onBuscar, 
               placeholder="Buscar juego..."
               value={busquedaJuego}
               onChange={(e) => {
-                setBusquedaJuego(e.target.value);
-                setFiltros({ ...filtros, juego: value === "" ? "" : filtros.juego });
+                const valor = e.target.value;
+                setBusquedaJuego(valor);
+
+                if (valor === "") {
+                  setFiltros({ ...filtros, juego: "" });
+                }
+
                 setMostrarJuegos(true);
               }}
+
               onFocus={() => setMostrarJuegos(true)}
               className="w-full p-2 rounded bg-[var(--color-bg)] text-[var(--color-text)]"
             />

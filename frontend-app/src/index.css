@@ -10,6 +10,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 @theme{
   --font-play: Play, "sans-serif";
 }
@@ -37,4 +41,20 @@ body {
 
 button {
   cursor: pointer;
+}
+
+/*Animación de dropdown en perfil */
+@keyframes dropdown {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-dropdown {
+  animation: dropdown 0.2s ease-out forwards;
 }

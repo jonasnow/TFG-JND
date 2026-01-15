@@ -203,46 +203,7 @@ def inscribir_usuario(datos: dict):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
-#Ver torneos en los que está inscrito un usuario
-@router.get("/torneos_usuario/{idUsuario}")
-def torneos_usuario(idUsuario: int):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""SELECT 
-            t.idTorneo AS idTorneo,
-            t.nombre AS Nombre,
-            j.nombre AS Juego,
-            fj.nombre AS FormatoJuego,
-            ft.nombre AS FormatoTorneo,
-            t.descripcion AS Descripcion,
-            t.precioInscripcion AS Precio,
-            t.numeroRondas AS Rondas,
-            t.duracionRondas AS DuracionRondas,
-            t.fechaHoraInicio AS FechaHoraInicio,
-            t.lugarCelebracion AS LugarCelebracion,
-            t.plazasMax AS PlazasMax,
-            t.estado AS Estado,
-            t.premios AS Premios
-            FROM Torneo t
-            INNER JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
-            INNER JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
-            INNER JOIN Juego j ON t.idJuego = j.idJuego
-            INNER JOIN Equipo_Torneo et ON t.idTorneo = et.idTorneo
-            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
-            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
-            INNER JOIN Usuario u ON ue.idUsuario = u.idUsuario
-            WHERE t.estado <> 'FINALIZADO'
-              AND t.fechaHoraInicio > NOW()
-              AND u.idUsuario = %s
-            ORDER BY t.fechaHoraInicio ASC;""", (idUsuario,))
-        torneos = cursor.fetchall()
-        return torneos
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        if 'conn' in locals() and conn.is_connected():
-            conn.close()
+
 
 #Ver si un usuario está inscrito en un torneo
 @router.get("/usuario_inscrito/{idUsuario}/{idTorneo}")
@@ -273,40 +234,6 @@ def usuario_inscrito(idUsuario: int, idTorneo: int):
         if 'conn' in locals() and conn.is_connected():
             conn.close()
 
-#Ver torneos organizados por un usuario
-@router.get("/torneos_organizador/{idUsuario}")
-def torneos_organizador(idUsuario: int):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""SELECT 
-            t.idTorneo AS idTorneo,
-            t.nombre AS Nombre,
-            j.nombre AS Juego,
-            fj.nombre AS FormatoJuego,
-            ft.nombre AS FormatoTorneo,
-            t.descripcion AS Descripcion,
-            t.precioInscripcion AS Precio,
-            t.numeroRondas AS Rondas,
-            t.duracionRondas AS DuracionRondas,
-            t.fechaHoraInicio AS FechaHoraInicio,
-            t.lugarCelebracion AS LugarCelebracion,
-            t.plazasMax AS PlazasMax,
-            t.estado AS Estado,
-            t.premios AS Premios
-            FROM Torneo t
-            INNER JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
-            INNER JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
-            INNER JOIN Juego j ON t.idJuego = j.idJuego
-            WHERE t.idOrganizador = %s
-            ORDER BY t.fechaHoraInicio ASC;""", (idUsuario,))
-        torneos = cursor.fetchall()
-        return torneos
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        if 'conn' in locals() and conn.is_connected():
-            conn.close()
 
 #Crear torneo
 def convert_torneo(raw: Torneo) -> dict:

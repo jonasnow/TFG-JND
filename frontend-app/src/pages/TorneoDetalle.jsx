@@ -43,7 +43,7 @@ export default function TorneoDetalle() {
     }, [id]);
 
     const esOrganizador = usuario && torneo && usuario.idUsuario === torneo.idOrganizador;
-
+    const esParticipante = usuario && torneo && !esOrganizador && estadoInscripcion && estadoInscripcion.confirmacionInscripcion === "CONFIRMADA" && estadoInscripcion.confirmacionAsistencia === "CONFIRMADA";
     const checkInscripcion = async (idUsuario, idTorneo) => {
         try {
             const res = await fetch(
@@ -107,6 +107,15 @@ export default function TorneoDetalle() {
         }
     };
 
+    const formatearEstado = (estado) => {
+        if (!estado) return "";
+
+        return estado
+            .toLowerCase()
+            .replace(/_/g, " ")
+            .replace(/^./, (c) => c.toUpperCase());
+    };
+
     if (error)
         return <p className="text-center mt-6 text-red-500 font-semibold">{error}</p>;
     if (!torneo)
@@ -115,7 +124,7 @@ export default function TorneoDetalle() {
 
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col items-center p-8">
-            <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full">
+            <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full break-words">
                 <h1 className="text-3xl font-bold mb-4">{torneo.nombre}</h1>
 
                 <p className="mb-2"><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
@@ -142,7 +151,18 @@ export default function TorneoDetalle() {
 
                     </div>
                 )}
-
+                {esParticipante && (
+                    <div className="mt-4 flex justify-center">
+                        <button
+                            onClick={() =>
+                                navigate(`/torneo/${slug}/en-curso/detalle`)
+                            }
+                            className="bg-emerald-600 text-white px-5 py-2 rounded-lg hover:bg-emerald-700 transition"
+                        >
+                            📊 Ver torneo en curso
+                        </button>
+                    </div>
+                )}
 
 
                 <div className="mt-6 flex justify-center">

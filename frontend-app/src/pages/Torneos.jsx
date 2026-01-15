@@ -147,7 +147,6 @@ export default function Torneos() {
           juego: filtros.juego || null
         })
       });
-
       const data = await response.json();
       setTorneos(data);
       setPaginaActual(1);

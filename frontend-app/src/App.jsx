@@ -10,6 +10,7 @@ import TorneoDetalle from './pages/TorneoDetalle';
 import NuevoTorneo from './pages/NuevoTorneo';
 import TorneoGestion from './pages/TorneoGestion';
 import GestionTorneoEnCurso from './pages/GestionTorneoEnCurso';
+import DetalleTorneoEnCurso from './pages/VistaTorneoEnCurso';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/nuevotorneo" element={<Layout><NuevoTorneo /></Layout>} />
         <Route path="/torneo/gestion/:slug" element={<Layout><TorneoGestion /></Layout>} />
         <Route path="/torneo/:slug/en-curso" element={<Layout><GestionTorneoEnCurso/></Layout>} />
+        <Route path="/torneo/:slug/en-curso/detalle" element={<Layout><DetalleTorneoEnCurso/></Layout>} />
         <Route path="*" element={<Layout><h2>404 Not Found</h2></Layout>} />
       </Routes>
     </Router>
