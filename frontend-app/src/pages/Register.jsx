@@ -15,9 +15,7 @@ export default function Register() {
     telefono: "",
   });
 
-  const [resultado, setResultado] = useState("");
   const [exito, setExito] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [procesando, setProcesando] = useState(false); //espera reloj arena
@@ -119,14 +117,14 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={procesando}
               className={`w-full py-2 rounded-lg font-bold text-white transition
-                ${isLoading
+                ${procesando
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)]"
                 }`}
             >
-              {isLoading ? "Registrando..." : "Registrarse"}
+              {procesando ? "Registrando..." : "Registrarse"}
             </button>
           </form>
         </div>

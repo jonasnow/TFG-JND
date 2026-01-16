@@ -10,10 +10,6 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
 @theme{
   --font-play: Play, "sans-serif";
 }

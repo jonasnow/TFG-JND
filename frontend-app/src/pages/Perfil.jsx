@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SidebarPerfil from "../components/SidebarPerfil";
-import PerfilFilterDropdown from "../components/PerfilFilterDropdown";
 
 export default function Perfil() {
   const { user } = useAuth();
@@ -11,14 +10,33 @@ export default function Perfil() {
   const [torneosOrganizas, setTorneosOrganizas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+
   const [datosUsuario, setDatosUsuario] = useState(null);
   const [cargandoDatos, setCargandoDatos] = useState(false);
   const [errorDatos, setErrorDatos] = useState(null);
+
   const [historialTorneos, setHistorialTorneos] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [errorHistorial, setErrorHistorial] = useState(null);
+
   const [juegos, setJuegos] = useState([]);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [datosEditables, setDatosEditables] = useState(null);
+  const [mostrarConfirmacionEdicion, setMostrarConfirmacionEdicion] = useState(false);
+  const [procesandoEdicion, setProcesandoEdicion] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState("");
+  const [errorEdicion, setErrorEdicion] = useState(null);
+
+  const [mostrarCambioPassword, setMostrarCambioPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    passwordActual: "",
+    nuevaPassword: "",
+    confirmarPassword: ""
+  });
+  const [errorPassword, setErrorPassword] = useState("");
+
 
   const [filtrosPerfil, setFiltrosPerfil] = useState({
     nombre: "",
@@ -170,6 +188,16 @@ export default function Perfil() {
     fetchHistorial();
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (!mensajeExito) return;
+
+    const timer = setTimeout(() => {
+      setMensajeExito("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [mensajeExito]);
+
   //Cambiar de página y subir arriba
   const cambiarPagina = (num) => {
     setPaginaActual(num);
@@ -302,6 +330,8 @@ export default function Perfil() {
       </div>
     </div>;
 
+
+
   const renderDatosPersonales = () => {
     if (cargandoDatos) {
       return (
@@ -320,6 +350,160 @@ export default function Perfil() {
     }
 
     if (!datosUsuario) return null;
+
+    if (modoEdicion && datosEditables) {
+      return (
+        <div className="max-w-3xl mx-auto bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center">
+            Editar datos personales
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm text-gray-500">Nombre</label>
+              <input
+                value={datosEditables.nombre}
+                onChange={(e) =>
+                  setDatosEditables({ ...datosEditables, nombre: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[var(--color-bg)]"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-500">Apellidos</label>
+              <input
+                value={datosEditables.apellidos}
+                onChange={(e) =>
+                  setDatosEditables({ ...datosEditables, apellidos: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[var(--color-bg)]"
+              />
+            </div>
+            {/*
+            <div>
+              <label className="text-sm text-gray-500">
+                Email (no editable por ahora)
+              </label>
+              <input
+                value={datosEditables.email}
+                disabled
+                className="w-full p-2 rounded bg-gray-200 cursor-not-allowed opacity-70"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-500">
+                Teléfono (no editable por ahora)
+              </label>
+              <input
+                value={datosEditables.telefono || ""}
+                disabled
+                className="w-full p-2 rounded bg-gray-200 cursor-not-allowed opacity-70"
+              />
+            </div>
+            */}
+
+            <div>
+              <label className="text-sm text-gray-500">Localidad</label>
+              <input
+                value={datosEditables.localidad || ""}
+                onChange={(e) =>
+                  setDatosEditables({ ...datosEditables, localidad: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[var(--color-bg)]"
+              />
+            </div>
+          </div>
+
+          {mostrarCambioPassword && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-[var(--color-bg-secondary)] p-6 rounded-2xl w-96">
+                <h2 className="text-xl font-bold mb-4 text-center">
+                  Cambiar contraseña
+                </h2>
+
+                <input
+                  type="password"
+                  placeholder="Contraseña actual"
+                  className="w-full p-2 mb-3 rounded"
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, passwordActual: e.target.value })
+                  }
+                />
+
+                <input
+                  type="password"
+                  placeholder="Nueva contraseña"
+                  className="w-full p-2 mb-3 rounded"
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, nuevaPassword: e.target.value })
+                  }
+                />
+
+                <input
+                  type="password"
+                  placeholder="Confirmar nueva contraseña"
+                  className="w-full p-2 mb-3 rounded"
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, confirmarPassword: e.target.value })
+                  }
+                />
+
+                {errorPassword && (
+                  <p className="text-red-500 text-sm text-center">{errorPassword}</p>
+                )}
+
+                <div className="flex justify-center gap-4 mt-4">
+                  <button
+                    onClick={guardarPassword}
+                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg"
+                  >
+                    Cambiar
+                  </button>
+                  <button
+                    onClick={cerrarCambioPassword}
+                    className="bg-gray-400 text-white px-4 py-2 rounded-lg"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {errorEdicion && (
+            <p className="text-red-500 text-center mt-4">{errorEdicion}</p>
+          )}
+          <div className="flex justify-center mt-6">
+            <button
+              type="button"
+              onClick={() => setMostrarCambioPassword(true)}
+              className="text-sm text-[var(--color-primary)] hover:underline"
+            >
+              Cambiar contraseña
+            </button>
+          </div>
+
+          <div className="flex justify-center gap-4 mt-8">
+            <button
+              onClick={() => setMostrarConfirmacionEdicion(true)}
+              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg"
+            >
+              Guardar cambios
+            </button>
+
+            <button
+              onClick={() => setModoEdicion(false)}
+              className="bg-gray-400 text-white px-6 py-2 rounded-lg"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="max-w-3xl mx-auto bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-8">
@@ -367,8 +551,8 @@ export default function Perfil() {
 
         <div className="mt-8 text-center">
           <button
-            disabled
-            className="bg-gray-400 text-white px-6 py-2 rounded-lg cursor-not-allowed"
+            onClick={iniciarEdicion}
+            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
           >
             Editar datos
           </button>
@@ -376,6 +560,79 @@ export default function Perfil() {
       </div>
     );
   };
+  const iniciarEdicion = () => {
+    setDatosEditables({ ...datosUsuario });
+    setModoEdicion(true);
+  };
+  const guardarPassword = async () => {
+    if (passwordData.nuevaPassword !== passwordData.confirmarPassword) {
+      setErrorPassword("Las contraseñas no coinciden");
+      return;
+    }
+
+    const response = await fetch(
+      `http://localhost:8000/cambiar_password/${user.idUsuario}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(passwordData)
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.error) {
+      setErrorPassword(result.error);
+    } else {
+      setMostrarCambioPassword(false);
+      setMensajeExito("Contraseña actualizada correctamente");
+    }
+  };
+  const cerrarCambioPassword = () => {
+    setMostrarCambioPassword(false);
+    setPasswordData({
+      passwordActual: "",
+      nuevaPassword: "",
+      confirmarPassword: ""
+    });
+    setErrorPassword("");
+  };
+
+  const guardarCambios = async () => {
+    setProcesandoEdicion(true);
+    setErrorEdicion(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/editar_datos_usuario/${user.idUsuario}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(datosEditables),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al guardar los cambios");
+      }
+
+      const data = await response.json();
+      setDatosUsuario((prev) => ({
+        ...prev,
+        ...datosEditables
+      }));
+      setMensajeExito("Datos actualizados correctamente");
+      setModoEdicion(false);
+    } catch (err) {
+      setErrorEdicion("No se pudieron guardar los cambios");
+    } finally {
+      setProcesandoEdicion(false);
+      setMostrarConfirmacionEdicion(false);
+    }
+  };
+
 
   const renderHistorialTorneos = () => {
     if (cargandoHistorial) {
@@ -483,6 +740,11 @@ export default function Perfil() {
                 Perfil de {user.nombre}
               </h1>
             </div>
+            {mensajeExito && (
+              <div className="mb-6 text-center text-green-600 font-semibold">
+                {mensajeExito}
+              </div>
+            )}
             {activeTab === "datos" && renderDatosPersonales()}
             {activeTab === "historial" && renderHistorialTorneos()}
             {activeTab === "participar" &&
@@ -490,6 +752,34 @@ export default function Perfil() {
 
             {activeTab === "organizar" &&
               renderTorneos(filtrarTorneos(torneosOrganizas))}
+            {mostrarConfirmacionEdicion && (
+              <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-96">
+                  <h2 className="text-xl font-semibold mb-4 text-center">
+                    Confirmar cambios
+                  </h2>
+
+                  <p className="text-center mb-4">
+                    ¿Estás seguro de que quieres guardar los cambios en tus datos personales?
+                  </p>
+
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={guardarCambios}
+                      className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg"
+                    >
+                      Confirmar
+                    </button>
+                    <button
+                      onClick={() => setMostrarConfirmacionEdicion(false)}
+                      className="bg-gray-400 text-white px-4 py-2 rounded-lg"
+                    >
+                      Atrás
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </main>
 

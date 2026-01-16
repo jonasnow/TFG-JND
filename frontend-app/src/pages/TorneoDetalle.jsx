@@ -107,25 +107,20 @@ export default function TorneoDetalle() {
         }
     };
 
-    const formatearEstado = (estado) => {
-        if (!estado) return "";
-
-        return estado
-            .toLowerCase()
-            .replace(/_/g, " ")
-            .replace(/^./, (c) => c.toUpperCase());
-    };
-
     if (error)
         return <p className="text-center mt-6 text-red-500 font-semibold">{error}</p>;
     if (!torneo)
         return <p className="text-center mt-6 text-[var(--color-text)]">Cargando torneo...</p>;
 
+    const plazasDisponibles = torneo.plazasMax - torneo.asistenciasConfirmadas;
 
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col items-center p-8">
             <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full break-words">
                 <h1 className="text-3xl font-bold mb-4">{torneo.nombre}</h1>
+                <p className="mb-2">
+                    <strong>Organizador:</strong> {torneo.nombreOrganizador}
+                </p>
 
                 <p className="mb-2"><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
                 <p className="mb-2"><strong>Hora inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()} hora local</p>
@@ -164,47 +159,52 @@ export default function TorneoDetalle() {
                     </div>
                 )}
 
-
-                <div className="mt-6 flex justify-center">
+                <div className="mt-6 text-center">
                     {usuario ? (
                         cargandoInscripcion ? (
-                            <p className="text-center text-gray-400">Comprobando inscripción...</p>
-                        ) : !estadoInscripcion || estadoInscripcion.confirmacionInscripcion === null ? (
-                            !procesandoInscripcion && !mostrarResultado && (
-                                <>
-                                    <button
-                                        onClick={() => setMostrarConfirmacion(true)}
-                                        className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                                    >
-                                        Inscribirse
-                                    </button>
-                                    <button
-                                        onClick={() => navigate(-1)}
-                                        className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
-                                    >
-                                        Volver
-                                    </button>
-                                </>
-                            )
-                        ) : estadoInscripcion.confirmacionInscripcion === "RECHAZADA" ? (
-                            <p className="text-center text-red-500 font-semibold">
-                                Se ha rechazado tu inscripción
-                            </p>
-                        ) : estadoInscripcion.confirmacionAsistencia === "RECHAZADA" ? (
-                            <p className="text-center text-orange-500 font-semibold">
-                                No asististe al torneo
-                            </p>
+                            <p className="text-gray-400 font-medium">Comprobando inscripción...</p>
+                        ) : estadoInscripcion?.confirmacionInscripcion === "CONFIRMADA" ? (
+                            <p className="text-green-400 font-semibold">✅ Estás inscrito en este torneo ✅</p>
+                        ) : estadoInscripcion?.confirmacionInscripcion === "RECHAZADA" ? (
+                            <p className="text-red-500 font-semibold">Se ha rechazado tu inscripción</p>
+                        ) : estadoInscripcion?.confirmacionAsistencia === "RECHAZADA" ? (
+                            <p className="text-orange-500 font-semibold">No asististe al torneo</p>
                         ) : (
-                            <p className="text-center text-green-400 font-semibold">
-                                ✅ Estás inscrito en este torneo ✅
-                            </p>
+                            <>
+                                <p className={`font-semibold mb-4 ${plazasDisponibles > 1
+                                        ? "text-green-500"
+                                        : plazasDisponibles === 1
+                                            ? "text-yellow-400"
+                                            : "text-red-500"
+                                    }`}>
+                                    {plazasDisponibles > 1 && `✅ Quedan ${plazasDisponibles} plazas disponibles`}
+                                    {plazasDisponibles === 1 && "⚠️ Última plaza disponible"}
+                                    {plazasDisponibles <= 0 &&
+                                        "🚫 Asistencia completa, puedes apuntarte pero no se asegura participación"}
+                                </p>
+
+                                {!procesandoInscripcion && !mostrarResultado && (
+                                    <div className="flex justify-center gap-4">
+                                        <button
+                                            onClick={() => setMostrarConfirmacion(true)}
+                                            className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+                                        >
+                                            Inscribirse
+                                        </button>
+                                        <button
+                                            onClick={() => navigate(-1)}
+                                            className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
+                                        >
+                                            Volver
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )
                     ) : (
                         <button
                             onClick={() =>
-                                navigate("/login", {
-                                    state: { from: location.pathname }
-                                })
+                                navigate("/login", { state: { from: location.pathname } })
                             }
                             className="bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)] transition"
                         >
@@ -212,6 +212,7 @@ export default function TorneoDetalle() {
                         </button>
                     )}
                 </div>
+
 
 
                 {procesandoInscripcion && (

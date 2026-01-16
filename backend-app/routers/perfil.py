@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 import mysql.connector
-
+import bcrypt
 from core.database import get_connection
 
 router = APIRouter(tags=["Perfil"])
@@ -105,6 +105,91 @@ def datos_usuario(idUsuario: int):
     finally:
         if 'conn' in locals() and conn.is_connected():
             conn.close()
+
+#Guardar datos cambiados de un usuario
+@router.post("/editar_datos_usuario/{idUsuario}")
+def editar_datos_usuario(idUsuario: int, datos: dict):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT idUsuario FROM Usuario
+            WHERE (email = %s OR telefono = %s)
+              AND idUsuario != %s
+        """, (
+            datos.get("email"),
+            datos.get("telefono"),
+            idUsuario
+        ))
+
+        if cursor.fetchone():
+            return {
+                "error": "El email o el teléfono ya están en uso por otro usuario"
+            }
+        cursor.execute("""
+            UPDATE Usuario
+            SET nombre = %s,
+                apellidos = %s,
+                email = %s,
+                localidad = %s,
+                telefono = %s
+            WHERE idUsuario = %s;
+        """, (
+            datos.get("nombre"),
+            datos.get("apellidos"),
+            datos.get("email"),
+            datos.get("localidad"),
+            datos.get("telefono"),
+            idUsuario
+        ))
+
+        conn.commit()
+        return {"message": "Datos actualizados correctamente"}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+    finally:
+        if conn.is_connected():
+            conn.close()
+
+@router.post("/cambiar_password/{idUsuario}")
+def cambiar_password(idUsuario: int, datos: dict):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT password_hash FROM Usuario WHERE idUsuario = %s",
+            (idUsuario,)
+        )
+        user = cursor.fetchone()
+
+        if not user or not bcrypt.checkpw(
+            datos["passwordActual"].encode(),
+            user["password_hash"].encode()
+        ):
+            return {"error": "La contraseña actual no es correcta"}
+
+        nueva_hash = bcrypt.hashpw(
+            datos["nuevaPassword"].encode(),
+            bcrypt.gensalt()
+        ).decode()
+
+        cursor.execute(
+            "UPDATE Usuario SET password_hash = %s WHERE idUsuario = %s",
+            (nueva_hash, idUsuario)
+        )
+        conn.commit()
+
+        return {"message": "Contraseña actualizada correctamente"}
+
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if conn.is_connected():
+            conn.close()
+
 
 #Ver historial del usuario (torneos finalizados)
 @router.get("/historial_usuario/{idUsuario}")

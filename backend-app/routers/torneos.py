@@ -155,25 +155,35 @@ def obtener_torneo(id_torneo: int):
                 t.idJuego,
                 t.idFormatoJuego,
                 t.fechaCreacion,
+
+                CONCAT(u.nombre, ' ', u.apellidos) AS nombreOrganizador,
+
+                (
+                    SELECT COUNT(*)
+                    FROM Equipo_Torneo et
+                    WHERE et.idTorneo = t.idTorneo
+                      AND et.confirmacionAsistencia = 'CONFIRMADA'
+                ) AS asistenciasConfirmadas,
+                              
                 COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
                 j.nombre AS nombreJuego,
                 ft.nombre AS nombreFormatoTorneo,
                 fj.nombre AS nombreFormatoJuego
             FROM Torneo t
+            LEFT JOIN Usuario u ON t.idOrganizador = u.idUsuario
             LEFT JOIN Liga l ON t.idLiga = l.idLiga
             LEFT JOIN Juego j ON t.idJuego = j.idJuego
             LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
             LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
             WHERE t.idTorneo = %s;
         """, (id_torneo,))
+
         torneo = cursor.fetchone()
-        if torneo:
-            return torneo
-        else:
-            return {"error": "Torneo no encontrado"}
+        return torneo if torneo else {"error": "Torneo no encontrado"}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn.is_connected():
             conn.close()
+
 
 #Inscribir usuario en torneo
 @router.post("/inscribir_usuario")
