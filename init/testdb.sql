@@ -72,59 +72,6 @@ CREATE TABLE `Equipo_Enfrentamiento` (
   `idEnfrentamiento` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
---
--- Volcado de datos para la tabla `Equipo_Enfrentamiento`
---
-
-INSERT INTO `Equipo_Enfrentamiento` (`idEquipo`, `idEnfrentamiento`) VALUES
-(1, 1),
-(2, 1),
-(3, 2),
-(4, 2),
-(5, 3),
-(6, 3),
-(7, 4),
-(8, 4),
-(1, 5),
-(3, 5),
-(2, 6),
-(4, 6),
-(5, 7),
-(7, 7),
-(6, 8),
-(8, 8),
-(1, 9),
-(5, 9),
-(2, 10),
-(6, 10),
-(3, 11),
-(7, 11),
-(4, 12),
-(8, 12),
-(1, 13),
-(2, 13),
-(3, 14),
-(4, 14),
-(5, 15),
-(6, 15),
-(7, 16),
-(8, 16),
-(1, 17),
-(3, 17),
-(2, 18),
-(4, 18),
-(5, 19),
-(7, 19),
-(6, 20),
-(8, 20),
-(1, 21),
-(5, 21),
-(2, 22),
-(6, 22),
-(3, 23),
-(7, 23),
-(4, 24),
-(8, 24);
 
 -- --------------------------------------------------------
 
