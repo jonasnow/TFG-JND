@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
-export default function PerfilFilterDropdown({
-  filtros,
-  setFiltros,
-  juegos,
-  onClose
-}) {
-  const [busquedaJuego, setBusquedaJuego] = useState("");
+export default function PerfilFilterDropdown({filtros, setFiltros, juegos, onClose}) {
+  const [busquedaJuego, setBusquedaJuego] = useState(filtros.juego || "");
   const [mostrarJuegos, setMostrarJuegos] = useState(false);
   const contenedorRef = useRef(null);
 
-  const juegosFiltrados = juegos.filter((juego) =>
+  useEffect(() => {
+    setBusquedaJuego(filtros.juego || "");
+  }, [filtros.juego]);
+
+  const listaJuegos = juegos;
+
+  const juegosFiltrados = listaJuegos.filter((juego) =>
     juego.nombre.toLowerCase().includes(busquedaJuego.toLowerCase())
   );
 
@@ -39,58 +40,66 @@ export default function PerfilFilterDropdown({
         origin-top animate-dropdown
       "
     >
-      <div className="space-y-3">
-        <label className="text-sm text-gray-500">Nombre</label>
-        <input
-          type="text"
-          value={filtros.nombre}
-          onChange={(e) =>
-            setFiltros({ ...filtros, nombre: e.target.value })
-          }
-          className="w-full p-2 rounded bg-[var(--color-bg)]"
-        />
+      <div className="space-y-4">
+        
+        <div>
+            <label className="block text-sm text-gray-500 mb-1">Nombre</label>
+            <input
+            type="text"
+            value={filtros.nombre || ""}
+            onChange={(e) =>
+                setFiltros({ ...filtros, nombre: e.target.value })
+            }
+            className="w-full p-2 rounded bg-[var(--color-bg)] border border-transparent focus:border-[var(--color-primary)] outline-none transition-colors"
+            placeholder="Nombre del torneo..."
+            />
+        </div>
 
-        <label className="text-sm text-gray-500">Fecha inicio</label>
-        <input
-          type="date"
-          onChange={(e) =>
-            setFiltros({ ...filtros, fecha_inicio: e.target.value })
-          }
-          className="w-full p-2 rounded bg-[var(--color-bg)]"
-        />
-
-        <label className="text-sm text-gray-500">Fecha fin</label>
-        <input
-          type="date"
-          onChange={(e) =>
-            setFiltros({ ...filtros, fecha_fin: e.target.value })
-          }
-          className="w-full p-2 rounded bg-[var(--color-bg)]"
-        />
-
-        <label className="text-sm text-gray-500">Juego</label>
+        <div className="grid grid-cols-2 gap-2">
+            <div>
+                <label className="block text-sm text-gray-500 mb-1">Desde</label>
+                <input
+                type="date"
+                value={filtros.fecha_inicio || ""}
+                onChange={(e) =>
+                    setFiltros({ ...filtros, fecha_inicio: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[var(--color-bg)] text-sm outline-none"
+                />
+            </div>
+            <div>
+                <label className="block text-sm text-gray-500 mb-1">Hasta</label>
+                <input
+                type="date"
+                value={filtros.fecha_fin || ""}
+                onChange={(e) =>
+                    setFiltros({ ...filtros, fecha_fin: e.target.value })
+                }
+                className="w-full p-2 rounded bg-[var(--color-bg)] text-sm outline-none"
+                />
+            </div>
+        </div>
 
         <div className="relative" ref={contenedorRef}>
+          <label className="block text-sm text-gray-500 mb-1">Juego</label>
           <input
             type="text"
-            placeholder="Buscar juego..."
+            placeholder="Escribe para buscar..."
             value={busquedaJuego}
             onChange={(e) => {
               const valor = e.target.value;
               setBusquedaJuego(valor);
-
               if (valor === "") {
                 setFiltros({ ...filtros, juego: "" });
               }
-
               setMostrarJuegos(true);
             }}
             onFocus={() => setMostrarJuegos(true)}
-            className="w-full p-2 rounded bg-[var(--color-bg)]"
+            className="w-full p-2 rounded bg-[var(--color-bg)] border border-transparent focus:border-[var(--color-primary)] outline-none"
           />
 
-          {mostrarJuegos && juegosFiltrados.length > 0 && (
-            <ul className="absolute z-50 w-full bg-[var(--color-bg)] border border-gray-600 rounded max-h-40 overflow-y-auto mt-1">
+          {mostrarJuegos && busquedaJuego && juegosFiltrados.length > 0 && (
+            <ul className="absolute z-50 w-full bg-[var(--color-bg-secondary)] border border-gray-600 rounded-lg max-h-48 overflow-y-auto mt-1 shadow-2xl">
               {juegosFiltrados.map((juego) => (
                 <li
                   key={juego.idJuego}
@@ -99,7 +108,7 @@ export default function PerfilFilterDropdown({
                     setFiltros({ ...filtros, juego: juego.nombre });
                     setMostrarJuegos(false);
                   }}
-                  className="p-2 hover:bg-[var(--color-bg-secondary)] cursor-pointer"
+                  className="p-3 text-sm hover:bg-[var(--color-primary)] hover:text-white cursor-pointer transition-colors border-b border-gray-700 last:border-0"
                 >
                   {juego.nombre}
                 </li>
@@ -108,12 +117,23 @@ export default function PerfilFilterDropdown({
           )}
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full bg-[var(--color-primary)] text-white p-2 rounded-lg"
-        >
-          Aplicar filtros
-        </button>
+        <div className="flex gap-2 pt-2">
+            <button
+                onClick={() => {
+                    setFiltros({ nombre: "", fecha_inicio: "", fecha_fin: "", juego: "" });
+                    setBusquedaJuego("");
+                }}
+                className="flex-1 bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-700 transition"
+            >
+                Limpiar
+            </button>
+            <button
+                onClick={onClose}
+                className="flex-1 bg-[var(--color-primary)] text-white p-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
+            >
+                Aplicar
+            </button>
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export default function Login() {
 
     const from = location.state?.from || "/";
 
-    const { setUser } = useAuth();
+    const { setUser, checkSession } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -18,18 +18,9 @@ export default function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const result = await loginUser(email, password);
+
         if (result.ok) {
-            const meRes = await fetch("http://localhost:8000/me", {
-                credentials: "include",
-            });
-            const meData = await meRes.json();
-            if (!meData.error) {
-                setUser({
-                    nombre: meData.usuario,
-                    email: meData.email,
-                    idUsuario: meData.idUsuario
-                });
-            }
+            await checkSession();
             navigate(from, { replace: true });
         } else {
             setError(result.error || "Error al iniciar sesión");

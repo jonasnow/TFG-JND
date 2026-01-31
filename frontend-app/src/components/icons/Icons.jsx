@@ -1,5 +1,5 @@
 import React from "react";
-
+//Iconos para acciones de tick, cruz y deshacer en Inscripciones del torneo
 export const TickIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24">
         <rect width="24" height="24" rx="4" fill="green" />

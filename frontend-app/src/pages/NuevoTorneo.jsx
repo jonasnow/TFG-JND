@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../api/auth";
 
 export default function RegisterTorneo() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -12,7 +13,7 @@ export default function RegisterTorneo() {
   const [formatosJuego, setFormatosJuego] = useState([]);
   const [ligas, setLigas] = useState([]);
 
-  const [cargando, setCargando] = useState(true);
+  const [cargandoDatos, setCargandoDatos] = useState(true);
   const [error, setError] = useState("");
   const [erroresCampos, setErroresCampos] = useState({});
   const [resultado, setResultado] = useState("");
@@ -20,8 +21,6 @@ export default function RegisterTorneo() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    idOrganizador: "",
-    idLiga: "",
     nombre: "",
     descripcion: "",
     precioInscripcion: "",
@@ -35,308 +34,287 @@ export default function RegisterTorneo() {
     idFormatoTorneo: "",
     idJuego: "",
     idFormatoJuego: "",
+    idLiga: ""
   });
-  //Interpretación de errores de validación de Pydantic
+
   const traducirError = (campo, msg, tipo, ctx) => {
-    // 1. Identificamos si el campo es un Select (Desplegable)
-    const esSelect = ["idJuego", "idFormatoTorneo", "idFormatoJuego", "idLiga"].includes(campo);
-
-    // 2. Errores de "Campo Requerido" o "Falta valor"
-    if (msg.includes("required") || tipo === "missing") {
-      return esSelect ? "Selecciona una opción" : "Este campo es obligatorio";
+    if (["idJuego", "idFormatoTorneo", "idFormatoJuego"].includes(campo)) {
+      if (tipo === "int_type" || tipo === "missing") return "Debes seleccionar una opción.";
     }
-
-    // 3. Error específico: Cadena vacía en campo con min_length (ej: Lugar)
-    if (tipo.includes("too_short") || (ctx && ctx.min_length > 0)) {
-      return "Este campo es obligatorio";
+    if (["nombre", "lugarCelebracion"].includes(campo)) {
+      if (tipo === "string_type" || tipo === "missing") return "Este campo no puede estar vacío.";
     }
-
-    // 4. Errores de Enteros (Int)
-    if (msg.includes("valid integer") || tipo === "int_parsing" || tipo === "type_error.integer") {
-      return esSelect ? "Selecciona una opción válida" : "Introduce un número entero";
-    }
-
-    // 5. Errores de Decimales (Float)
-    if (msg.includes("valid number") || tipo === "float_parsing" || tipo === "type_error.float") {
-      return "Introduce un importe válido";
-    }
-
-    // 6. Errores de String (Texto)
-    if (msg.includes("valid string") || tipo === "string_parsing" || tipo === "type_error.string") {
-      return "Este campo es obligatorio";
-    }
-
-    // 7. Errores de Fecha
-    if (msg.includes("valid datetime") || tipo === "datetime_parsing") {
-      return "Fecha y hora inválidas";
-    }
-
-    // 8. Validaciones de rango numérico
-    if (tipo === "greater_than") return `Debe ser mayor que ${ctx.gt}`;
-    if (tipo === "greater_than_equal") return `Debe ser mayor o igual a ${ctx.ge}`;
-
-    return msg; // Fallback
+    if (tipo === "greater_than") return `El valor debe ser mayor a ${ctx?.gt ?? 0}.`;
+    if (tipo === "int_type") return "Introduce un número entero válido.";
+    if (tipo === "float_type" || msg.includes("valid number")) return "Introduce un importe válido.";
+    if (tipo === "datetime_type" || tipo === "missing") return "Fecha inválida.";
+    return msg;
   };
 
-  //Cargar juegos, formatos base y ligas
   useEffect(() => {
     const inicializar = async () => {
-      if (!user?.email) {
-        setCargando(false);
+      if (authLoading) return;
+      if (!user) {
+        setCargandoDatos(false);
         return;
       }
-
       try {
-        const resJuegos = await fetch("http://localhost:8000/juegos");
-        setJuegos(await resJuegos.json());
-        const resFormatos = await fetch("http://localhost:8000/formatos_torneo");
-        setFormatosTorneo(await resFormatos.json());
-        const resLigas = await fetch("http://localhost:8000/ligas_disponibles");
-        setLigas(await resLigas.json());
-      } catch (err) {
-        setError("Error cargando datos iniciales");
-      }
+        const [resJuegos, resFormatos, resLigas] = await Promise.all([
+          fetch(`${API_URL}/juegos`),
+          fetch(`${API_URL}/formatos_torneo`),
+          fetch(`${API_URL}/ligas_disponibles`).catch(() => ({ json: () => [] }))
+        ]);
 
-      setCargando(false);
+        if (resJuegos.ok) setJuegos(await resJuegos.json());
+        if (resFormatos.ok) setFormatosTorneo(await resFormatos.json());
+        if (resLigas.ok) setLigas(await resLigas.json());
+
+      } catch (err) {
+        console.error(err);
+        setError("Error cargando datos iniciales.");
+      } finally {
+        setCargandoDatos(false);
+      }
     };
     inicializar();
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
-    if (user?.idUsuario) {
-      setFormData(prev => ({
-        ...prev,
-        idOrganizador: user.idUsuario //Carga el id del organizador desde el usuario autenticado
-      }));
+    if (!formData.idJuego) {
+      setFormatosJuego([]);
+      return;
     }
-  }, [user]);
-
-  useEffect(() => {
-    if (!formData.idJuego) return;
     const cargarFormatosJuego = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:8000/formatos_juego/${formData.idJuego}`
-        );
-        const data = await response.json();
-        setFormatosJuego(data);
-      } catch (err) {
-        console.error("Error cargando formatos del juego", err);
-        setFormatosJuego([]);
-      }
+        const response = await fetch(`${API_URL}/formatos_juego/${formData.idJuego}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFormatosJuego(data);
+        }
+      } catch (err) { console.error(err); }
     };
     cargarFormatosJuego();
   }, [formData.idJuego]);
 
-  if (!user)
-    return (
-      <div className="text-center mt-10 text-[var(--color-text)]">
-        No has iniciado sesión.
-        <div>
-          <button
-            onClick={() =>
-              navigate("/login", {
-                state: { from: location.pathname }
-              })
-            }
-            className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-          >
-            Iniciar sesión
-          </button></div>
-      </div>
-    );
-
-  if (error)
-    return (
-      <div className="text-center mt-10 text-red-600 font-semibold">
-        {error}
-      </div>
-    );
-
-  if (cargando)
-    return (
-      <div className="text-center mt-10 text-[var(--color-text)]">
-        Cargando...
-      </div>
-    );
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "idJuego") {
-      setFormData((prev) => ({
-        ...prev,
-        idJuego: value,
-        idFormatoJuego: "", //Reset formato juego al cambiar juego
-      }));
-      return;
+      setFormData(prev => ({ ...prev, idJuego: value, idFormatoJuego: "" }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    if (erroresCampos[name]) {
+      setErroresCampos(prev => ({ ...prev, [name]: null }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLoading) return;
+
     setIsLoading(true);
-    setResultado("Enviando...");
-    setErroresCampos({}); // Limpiamos errores anteriores
+    setResultado("");
+    setErroresCampos({});
+
+    const payload = {
+      ...formData,
+      idOrganizador: user.idUsuario,
+      precioInscripcion: formData.precioInscripcion === "" ? 0 : Number(formData.precioInscripcion),
+      numeroRondas: formData.numeroRondas === "" ? 0 : parseInt(formData.numeroRondas),
+      duracionRondas: formData.duracionRondas === "" ? 0 : parseInt(formData.duracionRondas),
+      plazasMax: formData.plazasMax === "" ? null : parseInt(formData.plazasMax),
+      idLiga: formData.idLiga === "" ? null : parseInt(formData.idLiga),
+      idJuego: parseInt(formData.idJuego),
+      idFormatoTorneo: parseInt(formData.idFormatoTorneo),
+      idFormatoJuego: parseInt(formData.idFormatoJuego),
+      descripcion: formData.descripcion || null,
+      premios: formData.premios || null
+    };
+
     try {
-      const response = await fetch("http://localhost:8000/torneo", {
+      const response = await fetch(`${API_URL}/torneo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        credentials: "include",
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
-      if (response.ok && !result.errores) {
-        setResultado("Torneo registrado con éxito.");
+      if (response.ok) {
+        setResultado("¡Torneo creado con éxito! Redirigiendo...");
         setExito(true);
-        setIsLoading(true);
-        setTimeout(() => {
-          navigate("/torneos");
-        }, 2000);
-      }
-      else {
+        setTimeout(() => navigate("/torneos"), 2000);
+      } else {
         setExito(false);
-        const nuevosErrores = {};
 
-        //Errores de Validación de Tipos (Pydantic - 422)
-        if (Array.isArray(result.detail)) {
-          result.detail.forEach((error) => {
-            //nombre del campo
-            const campo = error.loc[error.loc.length - 1];
-            nuevosErrores[campo] = traducirError(campo, error.msg, error.type, error.ctx);
+        if (result.detail && Array.isArray(result.detail)) {
+          const nuevosErrores = {};
+          result.detail.forEach(err => {
+            const campo = err.loc[err.loc.length - 1];
+            nuevosErrores[campo] = traducirError(campo, err.msg, err.type, err.ctx);
           });
-
           setErroresCampos(nuevosErrores);
-          setResultado("Por favor, revisa los campos marcados en rojo.");
+          setResultado("Por favor, corrige los errores marcados.");
         }
-
-        //Errores de Lógica de Negocio (HTTPException - 400)
-        else if (typeof result.detail === 'string') {
-          if (result.detail.includes("Round Robin")) {
-            setErroresCampos({ idFormatoTorneo: result.detail });
-            setResultado("Error en el formato del torneo.");
-          } else {
-            setResultado(result.detail);
-          }
-        }
-
-        //Estructura antigua de errores (por si acaso)
-        else if (result.errores) {
-          setErroresCampos(result.errores); // Asumiendo que result.errores ya es un objeto {campo: mensaje}
-          setResultado("Por favor, revisa los campos marcados.");
-        }
-
-        //Error desconocido
         else {
-          setResultado("Ocurrió un error inesperado al procesar la solicitud.");
+          const errorMsg = result.detail || "Error al crear el torneo.";
+          setResultado(errorMsg);
+
+          if (errorMsg.includes("Round Robin")) {
+            setErroresCampos({
+              idFormatoTorneo: "No se puede crear un torneo Round Robin de este formato de juego"
+            });
+          }
         }
       }
     } catch (error) {
-      console.error("Error de red:", error.message);
       setResultado("Error de conexión con el servidor.");
-      setExito(false);
     } finally {
       setIsLoading(false);
     }
   };
+  if (authLoading || (cargandoDatos && user)) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)] font-play p-6">
+        <div className="bg-[var(--color-bg-secondary)] p-8 rounded-2xl shadow-xl text-center max-w-md w-full">
+          <p className="mb-6 opacity-90">Debes iniciar sesión para poder crear y organizar torneos.</p>
+          <button
+            onClick={() => navigate("/login", { state: { from: location.pathname } })}
+            className="w-full bg-[var(--color-primary)] text-white px-6 py-3 rounded-lg hover:bg-[var(--color-secondary)] transition font-bold shadow-md"
+          >
+            Iniciar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)] font-play p-6">
-      <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Registrar Torneo
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4" style={{ pointerEvents: isLoading ? "none" : "auto" }}>
-          {[
-            { label: "Nombre", name: "nombre", type: "text", required: true },
-            { label: "Descripción", name: "descripcion", type: "textarea" },
-            { label: "Juego", name: "idJuego", type: "select", required: true, options: juegos },
-            { label: "Formato del Torneo", name: "idFormatoTorneo", type: "select", required: true, options: formatosTorneo },
-            { label: "Formato del Juego", name: "idFormatoJuego", type: "select", required: true, options: formatosJuego, disabled: !formData.idJuego },
-            { label: "Liga", name: "idLiga", type: "select", options: ligas },
-            { label: "Precio inscripción", name: "precioInscripcion", type: "number", note: "En €" },
-            { label: "Plazas Disponibles", name: "plazasMax", type: "number", note: "Por defecto, número máximo de jugadores para una partida" },
-            { label: "Número de rondas", name: "numeroRondas", type: "number", required: true },
-            { label: "Duración de rondas (min)", name: "duracionRondas", type: "number", required: true },
-            { label: "Premios", name: "premios", type: "textarea" },
-            { label: "Fecha y hora de inicio", name: "fechaHoraInicio", type: "datetime-local", required: true },
-            { label: "Lugar", name: "lugarCelebracion", type: "text", required: true },
-          ].map((field) => (
-            <div key={field.name}>
-              <label className="block mb-1 opacity-80">{field.label}{field.required && <span className="text-red-500">*</span>}
-              </label>
-              {field.note && <small className="block text-gray-500 mb-1">{field.note}</small>}
-              {field.type === "textarea" ? (
-                <textarea
-                  name={field.name}
-                  value={formData[field.name]}
-                  onChange={handleChange}
-                  className={`w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] font-play focus:outline-none focus:ring-2 
-          ${erroresCampos[field.name]
-                      ? "border-red-500 focus:ring-red-500" //para errores
-                      : "border-gray-300 dark:border-gray-700 focus:ring-[var(--color-primary)]" // Estilo normal
-                    }`} />
-              ) : field.type === "select" ? (
-                <select
-                  name={field.name}
-                  value={formData[field.name]}
-                  onChange={handleChange}
-                  disabled={field.disabled}
-                  className={`w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] font-play focus:outline-none focus:ring-2 
-          ${erroresCampos[field.name]
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 dark:border-gray-700 focus:ring-[var(--color-primary)]"
-                    }`}
-                >
-                  <option value="">Selecciona una opción</option>
-                  {field.options && field.options.map((opt) => (
-                    <option key={opt.idJuego || opt.idFormatoTorneo || opt.idFormatoJuego || opt.idLiga} value={opt.idJuego || opt.idFormatoTorneo || opt.idFormatoJuego || opt.idLiga} className="font-play">
-                      {opt.nombre}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type={field.type}
-                  name={field.name}
-                  value={formData[field.name]}
-                  onChange={handleChange}
-                  className={`w-full border rounded-lg p-2 bg-[var(--color-bg)] text-[var(--color-text)] font-play focus:outline-none focus:ring-2 
-          ${erroresCampos[field.name]
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 dark:border-gray-700 focus:ring-[var(--color-primary)]"
-                    }`} />
-              )}
-              {erroresCampos[field.name] && (
-                <p className="text-red-500 text-sm mt-1">
-                  {erroresCampos[field.name]}
+    <div className="min-h-screen flex flex-col items-center bg-[var(--color-bg)] text-[var(--color-text)] font-play p-6 pt-20">
+      <div className="bg-[var(--color-bg-secondary)] shadow-xl rounded-2xl p-8 w-full max-w-2xl border border-transparent hover:border-[var(--color-primary)] transition-colors duration-300">
+        <h1 className="text-3xl font-bold text-center mb-8">Registrar Torneo</h1>
+
+        {error && <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-center">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block mb-1 text-sm font-semibold">Nombre del Torneo <span className="text-red-500">*</span></label>
+              <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.nombre ? 'border-red-500' : 'border-transparent'} focus:border-[var(--color-primary)] outline-none`} />
+              {erroresCampos.nombre && <p className="text-red-500 text-xs mt-1">{erroresCampos.nombre}</p>}
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Juego <span className="text-red-500">*</span></label>
+              <select name="idJuego" value={formData.idJuego} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.idJuego ? 'border-red-500' : 'border-transparent'}`}>
+                <option value="">Selecciona...</option>
+                {juegos.map(j => <option key={j.idJuego} value={j.idJuego}>{j.nombre}</option>)}
+              </select>
+              {erroresCampos.idJuego && <p className="text-red-500 text-xs mt-1">{erroresCampos.idJuego}</p>}
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Formato Juego <span className="text-red-500">*</span></label>
+              <select name="idFormatoJuego" value={formData.idFormatoJuego} onChange={handleChange} disabled={!formData.idJuego} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.idFormatoJuego ? 'border-red-500' : 'border-transparent'} disabled:opacity-50`}>
+                <option value="">Selecciona...</option>
+                {formatosJuego.map(f => <option key={f.idFormatoJuego} value={f.idFormatoJuego}>{f.nombre}</option>)}
+              </select>
+              {erroresCampos.idFormatoJuego && <p className="text-red-500 text-xs mt-1">{erroresCampos.idFormatoJuego}</p>}
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Formato Torneo <span className="text-red-500">*</span></label>
+              <select
+                name="idFormatoTorneo"
+                value={formData.idFormatoTorneo}
+                onChange={handleChange}
+                className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.idFormatoTorneo ? 'border-red-500' : 'border-transparent'} focus:border-[var(--color-primary)] outline-none`}
+              >
+                <option value="">Selecciona...</option>
+                {formatosTorneo.map(f => <option key={f.idFormatoTorneo} value={f.idFormatoTorneo}>{f.nombre}</option>)}
+              </select>
+
+              {erroresCampos.idFormatoTorneo && (
+                <p className="text-red-500 text-xs mt-1 font-bold">
+                  {erroresCampos.idFormatoTorneo}
                 </p>
               )}
             </div>
-          ))}
+
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Liga (Opcional)</label>
+              <select name="idLiga" value={formData.idLiga} onChange={handleChange} className="w-full p-2 rounded bg-[var(--color-bg)] border border-transparent focus:border-[var(--color-primary)] outline-none">
+                <option value="">Ninguna</option>
+                {ligas.map(l => <option key={l.idLiga} value={l.idLiga}>{l.nombre}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Fecha y Hora <span className="text-red-500">*</span></label>
+              <input type="datetime-local" name="fechaHoraInicio" value={formData.fechaHoraInicio} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.fechaHoraInicio ? 'border-red-500' : 'border-transparent'}`} />
+              {erroresCampos.fechaHoraInicio && <p className="text-red-500 text-xs mt-1">{erroresCampos.fechaHoraInicio}</p>}
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Lugar <span className="text-red-500">*</span></label>
+              <input type="text" name="lugarCelebracion" value={formData.lugarCelebracion} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.lugarCelebracion ? 'border-red-500' : 'border-transparent'}`} />
+              {erroresCampos.lugarCelebracion && <p className="text-red-500 text-xs mt-1">{erroresCampos.lugarCelebracion}</p>}
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Precio (€)</label>
+              <input type="number" name="precioInscripcion" value={formData.precioInscripcion} onChange={handleChange} placeholder="0" className="w-full p-2 rounded bg-[var(--color-bg)]" />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Plazas Máximas</label>
+              <input type="number" name="plazasMax" value={formData.plazasMax} onChange={handleChange} placeholder="Auto" className="w-full p-2 rounded bg-[var(--color-bg)]" />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Nº Rondas <span className="text-red-500">*</span></label>
+              <input type="number" name="numeroRondas" value={formData.numeroRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.numeroRondas ? 'border-red-500' : 'border-transparent'}`} />
+              {erroresCampos.numeroRondas && <p className="text-red-500 text-xs mt-1">{erroresCampos.numeroRondas}</p>}
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-semibold">Duración Ronda (min) <span className="text-red-500">*</span></label>
+              <input type="number" name="duracionRondas" value={formData.duracionRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.duracionRondas ? 'border-red-500' : 'border-transparent'}`} />
+              {erroresCampos.duracionRondas && <p className="text-red-500 text-xs mt-1">{erroresCampos.duracionRondas}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block mb-1 text-sm font-semibold">Descripción</label>
+            <textarea name="descripcion" value={formData.descripcion} onChange={handleChange} rows="3" className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+          </div>
+
+          <div>
+            <label className="block mb-1 text-sm font-semibold">Premios</label>
+            <textarea name="premios" value={formData.premios} onChange={handleChange} rows="2" className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+          </div>
 
           <button
             type="submit"
             disabled={isLoading || exito}
-            className={`w-full py-2 rounded-lg text-white transition
-              ${isLoading ? "bg-gray-400" : "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)]"}`}
+            className={`w-full py-3 rounded-lg text-white font-bold text-lg transition ${isLoading ? "bg-gray-500 cursor-not-allowed" : "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"}`}
           >
-            {isLoading ? "Registrando..." : "Registrar Torneo"}
+            {isLoading ? "Creando Torneo..." : "Crear Torneo"}
           </button>
-        </form>
 
-        {resultado && (
-          <pre className="bg-[var(--color-bg)] text-[var(--color-text)] text-sm p-3 rounded-lg mt-4 whitespace-pre-wrap break-words font-play">
-            {resultado}
-          </pre>
-        )}
+          {resultado && (
+            <div className={`p-4 rounded-lg text-center font-bold ${exito ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+              {resultado}
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, usuarios, torneos, ligas, rondas, perfil
+from routers import auth, torneos, ligas, rondas, perfil
 #Instancia
 
 app = FastAPI()
@@ -17,7 +17,6 @@ app.add_middleware(
 )
 #Incluir routers
 app.include_router(auth.router)
-app.include_router(usuarios.router)
 app.include_router(torneos.router)
 app.include_router(ligas.router)
 app.include_router(rondas.router)

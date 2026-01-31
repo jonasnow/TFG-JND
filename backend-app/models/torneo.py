@@ -19,7 +19,7 @@ class Torneo(BaseModel):
     idJuego: int
     idFormatoJuego: int
 
-    # Validator de cadenas vacías a None
+    #Validator de cadenas vacías a None
     @validator('*', pre=True)
     def empty_str_to_none(cls, v):
         if v == "":

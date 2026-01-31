@@ -1,14 +1,19 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Depends
 import mysql.connector
 import bcrypt
 from core.database import get_connection
+from core.security import obtener_usuario_actual
+from models.usuario import UsuarioEditar, PasswordChange
 
 router = APIRouter(tags=["Perfil"])
 
 #Ver torneos organizados por un usuario
-@router.get("/torneos_organizador/{idUsuario}")
-def torneos_organizador(idUsuario: int):
+@router.get("/torneos_organizador")
+def torneos_organizador(usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+        
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""SELECT 
@@ -38,31 +43,36 @@ def torneos_organizador(idUsuario: int):
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Ver torneos en los que está inscrito un usuario
-@router.get("/torneos_usuario/{idUsuario}")
-def torneos_usuario(idUsuario: int):
+@router.get("/torneos_usuario")
+def torneos_usuario(usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("""SELECT 
-            t.idTorneo AS idTorneo,
-            t.nombre AS Nombre,
-            j.nombre AS Juego,
-            j.logo AS logoJuego,
-            fj.nombre AS FormatoJuego,
-            ft.nombre AS FormatoTorneo,
-            t.descripcion AS Descripcion,
-            t.precioInscripcion AS Precio,
-            t.numeroRondas AS Rondas,
-            t.duracionRondas AS DuracionRondas,
-            t.fechaHoraInicio AS FechaHoraInicio,
-            t.lugarCelebracion AS LugarCelebracion,
-            t.plazasMax AS PlazasMax,
-            t.estado AS Estado,
-            t.premios AS Premios
+        cursor.execute("""
+            SELECT 
+                et.confirmacionInscripcion AS EstadoInscripcion,
+                t.idTorneo AS idTorneo,
+                t.nombre AS Nombre,
+                j.nombre AS Juego,
+                j.logo AS logoJuego,
+                fj.nombre AS FormatoJuego,
+                ft.nombre AS FormatoTorneo,
+                t.descripcion AS Descripcion,
+                t.precioInscripcion AS Precio,
+                t.numeroRondas AS Rondas,
+                t.duracionRondas AS DuracionRondas,
+                t.fechaHoraInicio AS FechaHoraInicio,
+                t.lugarCelebracion AS LugarCelebracion,
+                t.plazasMax AS PlazasMax,
+                t.estado AS Estado,
+                t.premios AS Premios
             FROM Torneo t
             INNER JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
             INNER JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
@@ -72,21 +82,26 @@ def torneos_usuario(idUsuario: int):
             INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
             INNER JOIN Usuario u ON ue.idUsuario = u.idUsuario
             WHERE t.estado <> 'FINALIZADO'
-              AND t.fechaHoraInicio > NOW()
               AND u.idUsuario = %s
-            ORDER BY t.fechaHoraInicio ASC;""", (idUsuario,))
+            ORDER BY t.fechaHoraInicio ASC;
+        """, (idUsuario,))
+        
         torneos = cursor.fetchall()
         return torneos
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
+
 #Ver datos personales de un usuario
-@router.get("/datos_usuario/{idUsuario}")
-def datos_usuario(idUsuario: int):
+@router.get("/perfil")
+def datos_usuario(usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""SELECT 
@@ -99,33 +114,44 @@ def datos_usuario(idUsuario: int):
             FROM Usuario
             WHERE idUsuario = %s;""", (idUsuario,))
         usuario = cursor.fetchone()
+        
+        if not usuario:
+             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+             
         return usuario
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
-#Guardar datos cambiados de un usuario
-@router.post("/editar_datos_usuario/{idUsuario}")
-def editar_datos_usuario(idUsuario: int, datos: dict):
+#Editar perfil
+@router.put("/editar_perfil")
+def editar_datos_usuario(datos: UsuarioEditar, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
+        
+        # Validación de duplicados (Email o Teléfono)
         cursor.execute("""
             SELECT idUsuario FROM Usuario
             WHERE (email = %s OR telefono = %s)
               AND idUsuario != %s
         """, (
-            datos.get("email"),
-            datos.get("telefono"),
+            datos.email,     # Accedemos con punto, no con ["clave"]
+            datos.telefono,
             idUsuario
         ))
 
         if cursor.fetchone():
-            return {
-                "error": "El email o el teléfono ya están en uso por otro usuario"
-            }
+            raise HTTPException(status_code=409, detail="El email o el teléfono ya están en uso por otro usuario")
+
+        # Actualizar
         cursor.execute("""
             UPDATE Usuario
             SET nombre = %s,
@@ -135,27 +161,33 @@ def editar_datos_usuario(idUsuario: int, datos: dict):
                 telefono = %s
             WHERE idUsuario = %s;
         """, (
-            datos.get("nombre"),
-            datos.get("apellidos"),
-            datos.get("email"),
-            datos.get("localidad"),
-            datos.get("telefono"),
+            datos.nombre,
+            datos.apellidos,
+            datos.email,
+            datos.localidad,
+            datos.telefono,
             idUsuario
         ))
 
         conn.commit()
         return {"message": "Datos actualizados correctamente"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
 
     finally:
-        if conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
-@router.post("/cambiar_password/{idUsuario}")
-def cambiar_password(idUsuario: int, datos: dict):
+#Cambiar contraseña
+@router.post("/cambiar_password")
+def cambiar_password(datos: PasswordChange, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+        
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -166,13 +198,13 @@ def cambiar_password(idUsuario: int, datos: dict):
         user = cursor.fetchone()
 
         if not user or not bcrypt.checkpw(
-            datos["passwordActual"].encode(),
+            datos.passwordActual.encode(),
             user["password_hash"].encode()
         ):
-            return {"error": "La contraseña actual no es correcta"}
+            raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
 
         nueva_hash = bcrypt.hashpw(
-            datos["nuevaPassword"].encode(),
+            datos.nuevaPassword.encode(),
             bcrypt.gensalt()
         ).decode()
 
@@ -184,17 +216,22 @@ def cambiar_password(idUsuario: int, datos: dict):
 
         return {"message": "Contraseña actualizada correctamente"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 
-#Ver historial del usuario (torneos finalizados)
-@router.get("/historial_usuario/{idUsuario}")
-def historial_usuario(idUsuario: int):
+#Ver historial del usuario (torneos finalizados en los que ha participado)
+@router.get("/historial_usuario")
+def historial_usuario(usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
@@ -243,5 +280,5 @@ def historial_usuario(idUsuario: int):
         return {"error": str(e)}
 
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()

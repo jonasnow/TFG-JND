@@ -1,267 +1,353 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../api/auth";
 
 export default function TorneoDetalle() {
-    const { slug } = useParams();
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [torneo, setTorneo] = useState(null);
-    const [usuario, setUsuario] = useState(null);
-    const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
-    const [mensaje, setMensaje] = useState("");
-    const [estadoInscripcion, setEstadoInscripcion] = useState(null);
-    const [cargandoInscripcion, setCargandoInscripcion] = useState(true);
-    const [error, setError] = useState(null);
-    const [procesandoInscripcion, setProcesandoInscripcion] = useState(false);
-    const [mostrarResultado, setMostrarResultado] = useState(false);
-    const id = slug ? Number(slug.split("-").pop()) : null;
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
 
-    useEffect(() => {
-        const fetchTorneo = async () => {
-            try {
-                const response = await fetch(`http://localhost:8000/torneo/${id}`);
-                const data = await response.json();
-                setTorneo(data);
-            } catch {
-                setError("Error al cargar el torneo");
-            }
-        };
-        fetchTorneo();
+  const [torneo, setTorneo] = useState(null);
+  const [estadoInscripcion, setEstadoInscripcion] = useState(null);
+  const [cargandoInscripcion, setCargandoInscripcion] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [datosEditables, setDatosEditables] = useState(null);
+  const [procesandoEdicion, setProcesandoEdicion] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState("");
 
-        const checkUser = async () => {
-            try {
-                const res = await fetch("http://localhost:8000/me", {
-                    credentials: "include",
-                });
-                const data = await res.json();
-                if (!data.error) setUsuario(data);
-            } catch {
-                setUsuario(null);
-            }
-        };
-        checkUser();
-    }, [id]);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [procesandoInscripcion, setProcesandoInscripcion] = useState(false);
+  const [mostrarResultado, setMostrarResultado] = useState(false);
+  const [mensajeResultado, setMensajeResultado] = useState("");
+  const [tipoResultado, setTipoResultado] = useState("success");
 
-    const esOrganizador = usuario && torneo && usuario.idUsuario === torneo.idOrganizador;
-    const esParticipante = usuario && torneo && !esOrganizador && estadoInscripcion && estadoInscripcion.confirmacionInscripcion === "CONFIRMADA" && estadoInscripcion.confirmacionAsistencia === "CONFIRMADA";
-    const checkInscripcion = async (idUsuario, idTorneo) => {
-        try {
-            const res = await fetch(
-                `http://localhost:8000/usuario_inscrito/${idUsuario}/${idTorneo}`,
-                { credentials: "include" }
-            );
-            const data = await res.json();
+  const id = slug ? Number(slug.split("-").pop()) : null;
 
-            if (!data.error) {
-                setEstadoInscripcion({
-                    confirmacionInscripcion: data.confirmacionInscripcion,
-                    confirmacionAsistencia: data.confirmacionAsistencia
-                });
-            }
-
-        } finally {
-            setCargandoInscripcion(false);
+  //1. Cargar Torneo
+  useEffect(() => {
+    const fetchTorneo = async () => {
+      try {
+        const response = await fetch(`${API_URL}/torneo/${id}`);
+        if (response.ok) {
+            setTorneo(await response.json());
+        } else {
+            setError("No se pudo cargar el torneo.");
         }
+      } catch {
+        setError("Error de conexión.");
+      }
     };
+    if (id) fetchTorneo();
+  }, [id]);
 
-    useEffect(() => {
-        if (usuario && id) {
-            setCargandoInscripcion(true);
-            checkInscripcion(usuario.idUsuario, id);
-        }
-    }, [usuario, id]);
-
-    const handleInscripcion = async () => {
-        setProcesandoInscripcion(true);
-        setMostrarConfirmacion(false);
-
-        try {
-            const response = await fetch("http://localhost:8000/inscribir_usuario", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ email: usuario.email, idTorneo: id }),
+  //2. Comprobar Inscripción
+  useEffect(() => {
+    if (!user || !id) {
+        setCargandoInscripcion(false);
+        return;
+    }
+    const checkInscripcion = async () => {
+      try {
+        const res = await fetch(`${API_URL}/estoy_inscrito/${id}`, { credentials: "include" });
+        const data = await res.json();
+        
+        if (!data.error) {
+            setEstadoInscripcion({
+                confirmacionInscripcion: data.confirmacionInscripcion,
+                confirmacionAsistencia: data.confirmacionAsistencia
             });
-
-            const result = await response.json();
-
-            await new Promise(resolve => setTimeout(resolve, 1200));
-
-            if (result.error) {
-                setMensaje(result.error);
-            } else {
-                setMensaje(result.mensaje);
-
-                setEstadoInscripcion({
-                    confirmacionInscripcion: "PENDIENTE",
-                    confirmacionAsistencia: "PENDIENTE"
-                });
-            }
-
-            setMostrarResultado(true);
-        } catch (err) {
-            setMensaje("Error al inscribirse en el torneo");
-            setMostrarResultado(true);
-        } finally {
-            setProcesandoInscripcion(false);
         }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCargandoInscripcion(false);
+      }
     };
+    checkInscripcion();
+  }, [user, id]);
 
-    if (error)
-        return <p className="text-center mt-6 text-red-500 font-semibold">{error}</p>;
-    if (!torneo)
-        return <p className="text-center mt-6 text-[var(--color-text)]">Cargando torneo...</p>;
+  const esOrganizador = user && torneo && user.idUsuario === torneo.idOrganizador;
+  const ocupadas = torneo?.inscripciones || 0;
+  const plazasDisponibles = torneo ? torneo.plazasMax - ocupadas : 0;
+  const inscripcionStatus = estadoInscripcion?.confirmacionInscripcion;
 
-    const plazasDisponibles = torneo.plazasMax - torneo.asistenciasConfirmadas;
+  const iniciarEdicion = () => {
+    setDatosEditables({ ...torneo });
+    setModoEdicion(true);
+    setMensajeEdicion("");
+  };
+
+  const cancelarEdicion = () => {
+    setModoEdicion(false);
+    setDatosEditables(null);
+    setMensajeEdicion("");
+  };
+
+  const guardarEdicion = async () => {
+    setProcesandoEdicion(true);
+    setMensajeEdicion("");
+
+    try {
+        const response = await fetch(`${API_URL}/editar_torneo/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(datosEditables),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            setMensajeEdicion(result.detail || "Error al guardar cambios.");
+        } else {
+            setTorneo({ ...datosEditables });
+            setModoEdicion(false);
+            setMensajeResultado("Torneo actualizado correctamente");
+            setTipoResultado("success");
+            setMostrarResultado(true);
+        }
+    } catch (error) {
+        setMensajeEdicion("Error de conexión al guardar.");
+    } finally {
+        setProcesandoEdicion(false);
+    }
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleInscripcion = async () => {
+    setProcesandoInscripcion(true);
+    setMostrarConfirmacion(false);
+    try {
+      const response = await fetch("${API_URL}/inscribir_usuario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: user.email, idTorneo: id }),
+      });
+      const result = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      if (result.error) {
+        setMensajeResultado(result.error);
+        setTipoResultado("error");
+      } else {
+        setMensajeResultado("Solicitud enviada con éxito.");
+        setTipoResultado("success");
+        setEstadoInscripcion({ confirmacionInscripcion: "PENDIENTE", confirmacionAsistencia: "PENDIENTE" });
+      }
+      setMostrarResultado(true);
+    } catch (err) {
+      setMensajeResultado("Error de conexión.");
+      setTipoResultado("error");
+      setMostrarResultado(true);
+    } finally {
+      setProcesandoInscripcion(false);
+    }
+  };
+
+  const renderAcciones = () => {
+    if (modoEdicion) return null;
+
+    if (esOrganizador) {
+        return (
+            <button
+                onClick={() => navigate(torneo.estado === "EN_CURSO" ? `/torneo/${slug}/en-curso` : `/torneo/gestion/${slug}`)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg w-full md:w-auto"
+            >
+                ⚙️ Gestionar Torneo
+            </button>
+        );
+    }
+
+    if (cargandoInscripcion) return <p className="text-gray-400 font-medium">Verificando estado...</p>;
+
+    if (inscripcionStatus === "CONFIRMADA") {
+        return (
+            <div className="flex flex-col items-center gap-4 w-full">
+                <div className="bg-green-500/20 text-green-400 p-4 rounded-xl border border-green-500/50 font-bold w-full text-center">✅ Estás inscrito en este torneo</div>
+                <button onClick={() => navigate(`/torneo/${slug}/en-curso/detalle`)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg">📊 Panel del Torneo</button>
+            </div>
+        );
+    }
+    if (inscripcionStatus === "PENDIENTE") return <div className="bg-yellow-500/20 text-yellow-400 p-4 rounded-xl border border-yellow-500/50 font-bold w-full text-center">⏳ Tu inscripción está pendiente de aprobación</div>;
+    if (inscripcionStatus === "RECHAZADA") return <div className="bg-red-500/20 text-red-400 p-4 rounded-xl border border-red-500/50 font-bold w-full text-center">❌ Tu inscripción fue rechazada</div>;
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col items-center p-8">
-            <div className="bg-[var(--color-bg-secondary)] shadow-md rounded-2xl p-8 max-w-2xl w-full break-words">
-                <h1 className="text-3xl font-bold mb-4">{torneo.nombre}</h1>
-                <p className="mb-2">
-                    <strong>Organizador:</strong> {torneo.nombreOrganizador}
+        <div className="w-full flex flex-col items-center">
+            <div className="mb-6 text-center">
+                <p className="text-gray-400 text-sm uppercase tracking-wide mb-1">Estado de plazas</p>
+                <p className={`text-2xl font-bold ${plazasDisponibles > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {plazasDisponibles > 0 ? `${plazasDisponibles} plazas libres` : "🚫 COMPLETO"}
                 </p>
+            </div>
+            {user ? (
+                <button onClick={() => setMostrarConfirmacion(true)} disabled={plazasDisponibles <= 0} className={`px-8 py-3 rounded-xl font-bold transition shadow-lg w-full md:w-auto ${plazasDisponibles > 0 ? "bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`}>
+                    {plazasDisponibles > 0 ? "Inscribirse al Torneo" : "Sin plazas disponibles"}
+                </button>
+            ) : (
+                <button onClick={() => navigate("/login", { state: { from: location.pathname } })} className="bg-[var(--color-secondary)] hover:bg-[var(--color-primary)] text-white px-8 py-3 rounded-xl font-bold transition shadow-lg w-full md:w-auto">
+                    🔒 Iniciar sesión para inscribirte
+                </button>
+            )}
+        </div>
+    );
+  };
 
-                <p className="mb-2"><strong>Lugar:</strong> {torneo.lugarCelebracion}</p>
-                <p className="mb-2"><strong>Hora inicio:</strong> {new Date(torneo.fechaHoraInicio).toLocaleString()} hora local</p>
-                <p className="mb-2"><strong>Juego:</strong> {torneo.nombreJuego}</p>
-                <p className="mb-2"><strong>Plazas máximas:</strong> {torneo.plazasMax}</p>
-                <p className="mb-2"><strong>Liga:</strong> {torneo.nombreLiga}</p>
-                <p className="mt-4">{torneo.descripcion}</p>
+  if (error) return <div className="text-center mt-10 text-red-500 font-bold">{error}</div>;
+  if (!torneo) return <div className="text-center mt-10 text-[var(--color-text)]">Cargando...</div>;
 
-                {esOrganizador && (
-                    <div className="mt-6 flex justify-center">
-                        <button
-                            onClick={() => {
-                                if (torneo.estado === "EN_CURSO") {
-                                    navigate(`/torneo/${slug}/en-curso`);
-                                } else {
-                                    navigate(`/torneo/gestion/${slug}`);
-                                }
-                            }}
-                            className="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition"
-                        >
-                            ⚙️ Gestionar torneo
-                        </button>
-
-                    </div>
+  return (
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play p-4 md:p-8 flex justify-center">
+      <div className="bg-[var(--color-bg-secondary)] shadow-xl rounded-2xl p-6 md:p-10 max-w-3xl w-full">
+        
+        <div className="flex justify-between items-start mb-6">
+            <div className="flex-1 text-center">
+                {modoEdicion ? (
+                    <input 
+                        type="text" name="nombre" 
+                        value={datosEditables.nombre} 
+                        onChange={handleEditChange} 
+                        className="text-3xl font-bold text-center bg-[var(--color-bg)] p-2 rounded border border-gray-600 w-full text-[var(--color-primary)] outline-none focus:border-[var(--color-primary)]"
+                    />
+                ) : (
+                    <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-primary)]">{torneo.nombre}</h1>
                 )}
-                {esParticipante && (
-                    <div className="mt-4 flex justify-center">
-                        <button
-                            onClick={() =>
-                                navigate(`/torneo/${slug}/en-curso/detalle`)
-                            }
-                            className="bg-emerald-600 text-white px-5 py-2 rounded-lg hover:bg-emerald-700 transition"
-                        >
-                            📊 Ver torneo en curso
-                        </button>
-                    </div>
+            </div>
+            
+            {esOrganizador && !modoEdicion && torneo.estado === "PLANIFICADO" &&(
+                <button 
+                    onClick={iniciarEdicion}
+                    className="ml-4 text-gray-400 hover:text-[var(--color-primary)] transition"
+                    title="Editar detalles del torneo"
+                >
+                    Editar
+                </button>
+            )}
+        </div>
+        
+        <div className="grid md:grid-cols-2 gap-6 mb-8 text-lg">
+            <div>
+                <p className="text-gray-400 text-sm">Organizador</p>
+                <p className="font-semibold">{torneo.nombreOrganizador}</p> 
+            </div>
+            <div>
+                <p className="text-gray-400 text-sm">Juego</p>
+                <p className="font-semibold">{torneo.nombreJuego}</p> 
+            </div>
+            
+            <div>
+                <p className="text-gray-400 text-sm">Fecha y Hora</p>
+                {modoEdicion ? (
+                    <input 
+                        type="datetime-local" name="fechaHoraInicio" 
+                        value={datosEditables.fechaHoraInicio ? new Date(datosEditables.fechaHoraInicio).toISOString().slice(0, 16) : ""} 
+                        onChange={handleEditChange} 
+                        className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600"
+                    />
+                ) : (
+                    <p className="font-semibold">{new Date(torneo.fechaHoraInicio).toLocaleString()}</p>
                 )}
+            </div>
 
-                <div className="mt-6 text-center">
-                    {usuario ? (
-                        cargandoInscripcion ? (
-                            <p className="text-gray-400 font-medium">Comprobando inscripción...</p>
-                        ) : estadoInscripcion?.confirmacionInscripcion === "CONFIRMADA" ? (
-                            <p className="text-green-400 font-semibold">✅ Estás inscrito en este torneo ✅</p>
-                        ) : estadoInscripcion?.confirmacionInscripcion === "RECHAZADA" ? (
-                            <p className="text-red-500 font-semibold">Se ha rechazado tu inscripción</p>
-                        ) : estadoInscripcion?.confirmacionAsistencia === "RECHAZADA" ? (
-                            <p className="text-orange-500 font-semibold">No asististe al torneo</p>
-                        ) : (
-                            <>
-                                <p className={`font-semibold mb-4 ${plazasDisponibles > 1
-                                        ? "text-green-500"
-                                        : plazasDisponibles === 1
-                                            ? "text-yellow-400"
-                                            : "text-red-500"
-                                    }`}>
-                                    {plazasDisponibles > 1 && `✅ Quedan ${plazasDisponibles} plazas disponibles`}
-                                    {plazasDisponibles === 1 && "⚠️ Última plaza disponible"}
-                                    {plazasDisponibles <= 0 &&
-                                        "🚫 Asistencia completa, puedes apuntarte pero no se asegura participación"}
-                                </p>
-
-                                {!procesandoInscripcion && !mostrarResultado && (
-                                    <div className="flex justify-center gap-4">
-                                        <button
-                                            onClick={() => setMostrarConfirmacion(true)}
-                                            className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                                        >
-                                            Inscribirse
-                                        </button>
-                                        <button
-                                            onClick={() => navigate(-1)}
-                                            className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
-                                        >
-                                            Volver
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )
-                    ) : (
-                        <button
-                            onClick={() =>
-                                navigate("/login", { state: { from: location.pathname } })
-                            }
-                            className="bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)] transition"
-                        >
-                            Iniciar sesión para registro
-                        </button>
-                    )}
-                </div>
-
-
-
-                {procesandoInscripcion && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-72 text-center">
-                            <div className="animate-pulse text-4xl mb-3">⏳</div>
-                            <p>Procesando inscripción...</p>
-                        </div>
-                    </div>
+            <div>
+                <p className="text-gray-400 text-sm">Lugar</p>
+                {modoEdicion ? (
+                    <input type="text" name="lugarCelebracion" value={datosEditables.lugarCelebracion} onChange={handleEditChange} className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600"/>
+                ) : (
+                    <p className="font-semibold">{torneo.lugarCelebracion}</p>
                 )}
+            </div>
 
-                {mostrarResultado && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-80 text-center">
-                            <div className="text-green-400 text-4xl mb-3">✔️</div>
-                            <p className="font-medium">{mensaje}</p>
-                            <button
-                                className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                                onClick={() => setMostrarResultado(false)}
-                            >
-                                Cerrar
-                            </button>
-                        </div>
-                    </div>
+            <div>
+                <p className="text-gray-400 text-sm">Plazas Totales</p>
+                {modoEdicion ? (
+                    <input type="number" name="plazasMax" value={datosEditables.plazasMax} onChange={handleEditChange} className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600"/>
+                ) : (
+                    <p className="font-semibold">{torneo.plazasMax}</p>
                 )}
+            </div>
 
-                {mostrarConfirmacion && (
-                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-96">
-                            <h2 className="text-xl font-semibold mb-4 text-center">{`Confirmar inscripción`}</h2>
-                            <p className="text-center mb-4">{`Vas a confirmar inscripción para el torneo ${torneo.nombre}`}</p>
-                            <div className="flex justify-center space-x-4">
-                                <button
-                                    onClick={handleInscripcion}
-                                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                                >
-                                    Confirmar
-                                </button>
-                                <button
-                                    onClick={() => setMostrarConfirmacion(false)}
-                                    className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition"
-                                >
-                                    Atrás
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div>
+                <p className="text-gray-400 text-sm">Precio Inscripción</p>
+                {modoEdicion ? (
+                    <input type="number" name="precioInscripcion" value={datosEditables.precioInscripcion} onChange={handleEditChange} className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600"/>
+                ) : (
+                    <p className="font-semibold">{torneo.precioInscripcion} €</p>
                 )}
             </div>
         </div>
-    );
+
+        <div className="bg-[var(--color-bg)] p-6 rounded-xl mb-8">
+            <h3 className="text-xl font-bold mb-2">Descripción</h3>
+            {modoEdicion ? (
+                <textarea name="descripcion" value={datosEditables.descripcion} onChange={handleEditChange} rows={4} className="w-full bg-[var(--color-bg-secondary)] p-2 rounded border border-gray-600" />
+            ) : (
+                <p className="opacity-90 whitespace-pre-wrap">{torneo.descripcion || "Sin descripción."}</p>
+            )}
+        </div>
+
+        {modoEdicion && (
+            <div className="flex flex-col items-center gap-2 mb-8">
+                {mensajeEdicion && <p className="text-red-400 text-sm">{mensajeEdicion}</p>}
+                <div className="flex gap-4">
+                    <button 
+                        onClick={cancelarEdicion}
+                        className="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg font-bold transition"
+                        disabled={procesandoEdicion}
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        onClick={guardarEdicion}
+                        className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold transition flex items-center gap-2"
+                        disabled={procesandoEdicion}
+                    >
+                        {procesandoEdicion ? "Guardando..." : "Guardar Cambios"}
+                    </button>
+                </div>
+            </div>
+        )}
+
+        {!modoEdicion && (
+            <div className="flex flex-col items-center gap-4 mt-8 pt-6 border-t border-gray-700">
+                {renderAcciones()}
+            </div>
+        )}
+
+        {mostrarConfirmacion && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-[var(--color-bg-secondary)] rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+                    <h3 className="text-xl font-bold mb-4">Confirmar Inscripción</h3>
+                    <p className="mb-6 opacity-80">¿Confirmas tu inscripción en <strong>{torneo.nombre}</strong>?</p>
+                    <div className="flex justify-center gap-4">
+                        <button onClick={() => setMostrarConfirmacion(false)} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 text-white">Cancelar</button>
+                        <button onClick={handleInscripcion} className="px-4 py-2 bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-secondary)] text-white font-bold">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {mostrarResultado && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-[var(--color-bg-secondary)] rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+                    <div className={`text-5xl mb-4 ${tipoResultado === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+                        {tipoResultado === 'success' ? '✔️' : '⚠️'}
+                    </div>
+                    <p className="font-bold text-lg mb-6">{mensajeResultado}</p>
+                    <button onClick={() => setMostrarResultado(false)} className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg font-bold">Cerrar</button>
+                </div>
+            </div>
+        )}
+
+      </div>
+    </div>
+  );
 }

@@ -1,15 +1,19 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+import mysql.connector
 
 from core.database import get_connection
+from core.security import obtener_usuario_actual, obtener_usuario_actual_no_excepciones
+
 from models.torneo import Torneo
+from models.usuario import UsuarioInscripcion
 from models.filtroTorneos import FiltroTorneos
 
 router = APIRouter(tags=["Torneos"])
 
 #Listar torneos vigentes
-
 @router.get("/torneos_vigentes")
 def listar_torneos_vigentes():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -42,17 +46,15 @@ def listar_torneos_vigentes():
             LEFT JOIN Juego j ON t.idJuego = j.idJuego
             LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
             LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
-            WHERE t.fechaHoraInicio > NOW()
             ORDER BY t.fechaHoraInicio ASC;
         """)
         torneos = cursor.fetchall()
         return torneos
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Ver torneos vigentes con un filtro de búsqueda
-
 @router.post("/torneos_vigentes_filtrados")
 def listar_torneos_filtrados(filtros: FiltroTorneos):
     try:
@@ -131,6 +133,7 @@ def listar_torneos_filtrados(filtros: FiltroTorneos):
 
 @router.get("/torneo/{id_torneo}")
 def obtener_torneo(id_torneo: int):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -160,8 +163,8 @@ def obtener_torneo(id_torneo: int):
                     SELECT COUNT(*)
                     FROM Equipo_Torneo et
                     WHERE et.idTorneo = t.idTorneo
-                      AND et.confirmacionAsistencia = 'CONFIRMADA'
-                ) AS asistenciasConfirmadas,
+                      AND et.confirmacionInscripcion IN ('PENDIENTE', 'CONFIRMADA')
+                ) AS inscripciones,
                               
                 COALESCE(l.nombre, 'Ninguna') AS nombreLiga,
                 j.nombre AS nombreJuego,
@@ -179,58 +182,86 @@ def obtener_torneo(id_torneo: int):
         torneo = cursor.fetchone()
         return torneo if torneo else {"error": "Torneo no encontrado"}
     finally:
-        if conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 
 #Inscribir usuario en torneo
 @router.post("/inscribir_usuario")
-def inscribir_usuario(datos: dict):
-    email = datos.get("email")
-    id_torneo = datos.get("idTorneo")
+def inscribir_usuario(datos: UsuarioInscripcion, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    id_torneo = datos.idTorneo
+    id_usuario = usuario_actual["idUsuario"] #Tomar datos de la cookie de sesión
 
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT equipo.idEquipo FROM Equipo equipo JOIN Usuario usuario ON equipo.nombre = CONCAT(usuario.nombre, ' ', usuario.apellidos) WHERE usuario.email = %s;", (email,))
+        
+        #3. Buscamos el equipo individual del usuario
+        cursor.execute("""
+            SELECT idEquipo 
+            FROM Usuario_Equipo 
+            WHERE idUsuario = %s
+            LIMIT 1; 
+        """, (id_usuario,))
+        
         equipo = cursor.fetchone()
-        if not equipo:
-            return {"error": "Usuario no encontrado"}
-        #Como el par idEquipo, idTorneo son clave primaria compuesta, si ya existe la inscripción saltará excepción
-        cursor.execute("INSERT INTO Equipo_Torneo (idEquipo, idTorneo) VALUES (%s, %s);", (equipo['idEquipo'], id_torneo))
-        #añadir timestamp de inscripción que sea la fecha de inscripción
+        
+        if not equipo: #Fallo de jugador sin equipo, por si acaso
+            raise HTTPException(status_code=400, detail="No se encontró un perfil de jugador asociado a este usuario.")
+
+        #4. Intentamos la inscripción
+        cursor.execute("""
+            INSERT INTO Equipo_Torneo (idEquipo, idTorneo, confirmacionInscripcion, confirmacionAsistencia) 
+            VALUES (%s, %s, 'PENDIENTE', 'PENDIENTE');
+        """, (equipo['idEquipo'], id_torneo))
+        
         conn.commit()
         
-        return {"mensaje": "Inscrito correctamente en el torneo."}
+        return {"mensaje": "Solicitud de inscripción enviada correctamente."}
     
-    except mysql.connector.IntegrityError:
-        return {"error": "El usuario ya estaba inscrito en este torneo."}
+    except mysql.connector.IntegrityError as e:
+        #Ya está inscrito
+        if e.errno == 1062:
+            raise HTTPException(status_code=409, detail="Ya tienes una solicitud activa para este torneo.")
+        #El torneo no existe
+        if e.errno == 1452:
+            raise HTTPException(status_code=404, detail="El torneo indicado no existe.")
+        
+        print(f"Error SQL: {e}")
+        raise HTTPException(status_code=500, detail="Error de base de datos al procesar la inscripción.")
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error general: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor.")
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 
-
-#Ver si un usuario está inscrito en un torneo
-@router.get("/usuario_inscrito/{idUsuario}/{idTorneo}")
-def usuario_inscrito(idUsuario: int, idTorneo: int):
+#Ver si el usuario que realiza la petición está inscrito en un torneo
+@router.get("/estoy_inscrito/{idTorneo}") 
+def verificar_inscripcion(idTorneo: int, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
     try:
+        idUsuario = usuario_actual["idUsuario"]
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("""SELECT et.confirmacionInscripcion, et.confirmacionAsistencia
-                       FROM Equipo_Torneo et
-                       INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
-                       INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
-                       WHERE ue.idUsuario = %s AND et.idTorneo = %s;
-                       """, (idUsuario, idTorneo))
+        cursor.execute("""
+            SELECT et.confirmacionInscripcion, et.confirmacionAsistencia
+            FROM Equipo_Torneo et
+            INNER JOIN Equipo e ON et.idEquipo = e.idEquipo
+            INNER JOIN Usuario_Equipo ue ON e.idEquipo = ue.idEquipo
+            WHERE ue.idUsuario = %s AND et.idTorneo = %s;
+        """, (idUsuario, idTorneo))
+        
         result = cursor.fetchone()
+        
         if result:
-            return {
-                "confirmacionInscripcion": result["confirmacionInscripcion"],
-                "confirmacionAsistencia": result["confirmacionAsistencia"]
-            }
+            return result
         else:
             return {
                 "confirmacionInscripcion": None,
@@ -239,37 +270,38 @@ def usuario_inscrito(idUsuario: int, idTorneo: int):
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Crear torneo
-@router.post("/torneo", status_code=201) # 201 Created
-def crear_torneo(torneo: Torneo): # FastAPI ya ha validado tipos y rangos aquí
-    
+@router.post("/torneo", status_code=201)
+def crear_torneo(
+    torneo: Torneo, 
+    usuario_actual: dict = Depends(obtener_usuario_actual) 
+):    
     conn = get_connection()
     try:
         cursor = conn.cursor()
         
-        # 1. Validaciones de lógica de negocio (BD)
         cursor.execute("SELECT numMaxJugadores FROM FormatoJuego WHERE idFormatoJuego = %s", (torneo.idFormatoJuego,))
         resultado = cursor.fetchone()
         
         if not resultado:
-            # Retornar error 400 o 422 en lugar de un JSON con 200 OK
             raise HTTPException(status_code=400, detail="Formato de juego inválido")
             
         num_max_jugadores = resultado[0]
 
-        # Validación Round Robin
+        #Validación Round Robin
         if torneo.idFormatoTorneo == 3 and num_max_jugadores > 2:
-            raise HTTPException(status_code=400, detail="El formato Round Robin solo es válido para juegos de 2 jugadores")
+            raise HTTPException(status_code=400, detail="Formato de juego inválido para Round Robin")
 
-        # Autocorrección plazas
+        #Autocorrección plazas
         plazas_finales = torneo.plazasMax
         if plazas_finales is None:
             plazas_finales = num_max_jugadores
 
-        # 2. Insertar
+        id_organizador = usuario_actual["idUsuario"]
+
         query = """
             INSERT INTO Torneo 
             (nombre, descripcion, precioInscripcion, numeroRondas, duracionRondas, fechaHoraInicio, 
@@ -279,7 +311,7 @@ def crear_torneo(torneo: Torneo): # FastAPI ya ha validado tipos y rangos aquí
         values = (
             torneo.nombre, torneo.descripcion, torneo.precioInscripcion, torneo.numeroRondas,
             torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, plazas_finales,
-            torneo.idOrganizador, torneo.idFormatoTorneo, torneo.idJuego, torneo.idFormatoJuego,
+            id_organizador, torneo.idFormatoTorneo, torneo.idJuego, torneo.idFormatoJuego,
             torneo.idLiga, torneo.premios, torneo.estado
         )
         print(torneo)
@@ -289,7 +321,11 @@ def crear_torneo(torneo: Torneo): # FastAPI ya ha validado tipos y rangos aquí
         return {"mensaje": f"Torneo '{torneo.nombre}' creado correctamente", "id": cursor.lastrowid}
 
     except HTTPException as he:
-        raise he # Re-lanzar excepciones HTTP controladas
+        raise he
+    except mysql.connector.IntegrityError as e:
+        if e.errno == 1452:
+            raise HTTPException(status_code=400, detail="Un dato indicado no existe.")
+        raise HTTPException(status_code=500, detail="Error de integridad de datos.")
     except Exception as e:
         conn.rollback()
         print(f"Error DB: {e}")
@@ -299,37 +335,41 @@ def crear_torneo(torneo: Torneo): # FastAPI ya ha validado tipos y rangos aquí
 
 #Eliminar miembro de un torneo
 @router.delete("/eliminar_equipo_torneo/{id_torneo}/{id_equipo}")
-def eliminar_equipo_torneo(id_torneo: int, id_equipo: int):
+def eliminar_equipo_torneo(
+    id_torneo: int, 
+    id_equipo: int,
+    usuario_actual: dict = Depends(obtener_usuario_actual)
+):
     try:
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT COUNT(*) 
-            FROM Equipo_Torneo 
-            WHERE idTorneo = %s AND idEquipo = %s;
-        """, (id_torneo, id_equipo))
-        existe = cursor.fetchone()
-        #Si no existe el registro, no se puede eliminar
-        if existe == 0:
-            return {"eliminado": False, "motivo": "No estaba inscrito"}
-        else:
-            cursor.execute("""
-                DELETE FROM Equipo_Torneo
-                WHERE idTorneo = %s AND idEquipo = %s;
-            """, (id_torneo, id_equipo))
-            conn.commit()
+        cursor = conn.cursor(dictionary=True)
 
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo = cursor.fetchone()
+
+        if not torneo:
+             raise HTTPException(status_code=404, detail="Torneo no encontrado")
+        if not id_equipo:
+             raise HTTPException(status_code=400, detail="ID de equipo no encontrado")
+        if torneo["idOrganizador"] != usuario_actual["idUsuario"]:
+             raise HTTPException(status_code=403, detail="Solo el organizador puede eliminar equipos")
+        if torneo["estado"] == "EN_CURSO" or torneo["estado"] == "FINALIZADO":
+             raise HTTPException(status_code=400, detail="No se pueden eliminar equipos de torneos en curso o finalizados")
+        
+        cursor.execute("DELETE FROM Equipo_Torneo WHERE idTorneo = %s AND idEquipo = %s;", (id_torneo, id_equipo))
+        conn.commit()
+        
         return {"eliminado": True, "mensaje": "Eliminado correctamente"}
-
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Comprobar si todos los usuarios de un torneo están inscritos
 @router.get("/comprobar_inscripciones/{id_torneo}")
 def comprobar_inscripciones(id_torneo: int):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -364,12 +404,13 @@ def comprobar_inscripciones(id_torneo: int):
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Devolver formatos de torneo
 @router.get("/formatos_torneo")
 def formatos_torneo():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -379,11 +420,13 @@ def formatos_torneo():
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
+
 #Devolver juegos disponibles
 @router.get("/juegos")
 def juegos():
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -393,12 +436,13 @@ def juegos():
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Devolver formatos de juego
 @router.get("/formatos_juego/{id_juego}")
 def formatos_juego(id_juego: int):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -408,12 +452,13 @@ def formatos_juego(id_juego: int):
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Devolver el número de inscritos en un torneo
 @router.get("/numero_inscritos/{id_torneo}")
 def numero_inscritos(id_torneo: int):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -427,19 +472,33 @@ def numero_inscritos(id_torneo: int):
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
             
 #Devolver inscritos en un torneo
 @router.get("/inscritos_torneo/{id_torneo}")
-def inscritos_torneo(id_torneo: int):
+def inscritos_torneo(
+    id_torneo: int, 
+    usuario_actual: dict | None = Depends(obtener_usuario_actual_no_excepciones) 
+):
+    conn = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo = cursor.fetchone()
+        if not torneo:
+            return {"error": "Torneo no encontrado"}
+
+        es_organizador = False
+        if usuario_actual and usuario_actual["idUsuario"] == torneo["idOrganizador"]:
+            es_organizador = True
+        #Si el nombre del equipo está vacío, se muestra el nombre del usuario que lo creó
         cursor.execute("""
             SELECT 
                 e.idEquipo,
-                e.nombre AS nombreEquipo,
+                COALESCE(NULLIF(e.nombre, ''), CONCAT(u.nombre, ' ', u.apellidos)) AS nombreEquipo,
                 ue.idUsuario,
                 u.nombre AS nombreUsuario,
                 u.apellidos AS apellidosUsuario,
@@ -452,23 +511,41 @@ def inscritos_torneo(id_torneo: int):
             INNER JOIN Usuario u ON ue.idUsuario = u.idUsuario
             WHERE et.idTorneo = %s;
         """, (id_torneo,))
+        
         inscritos = cursor.fetchall()
+        
+        if not es_organizador:
+            for inscrito in inscritos:
+                inscrito.pop("emailUsuario", None)
+                
         return inscritos
+
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Confirmar inscripción de un equipo en un torneo
 @router.post("/confirmar_inscripcion")
-def confirmar_inscripcion(datos: dict):
+def confirmar_inscripcion(datos: dict, usuario_actual: dict = Depends(obtener_usuario_actual)):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
 
+    conn = None
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo = cursor.fetchone()
+        
+        if not torneo:
+            raise HTTPException(status_code=404, detail="Torneo no encontrado")
+            
+        if torneo["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET confirmacionInscripcion = 'CONFIRMADA'
@@ -478,93 +555,154 @@ def confirmar_inscripcion(datos: dict):
 
         return {"mensaje": "Inscripción confirmada correctamente."}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
 #Confirmar asistencia de un equipo en un torneo
 @router.post("/confirmar_asistencia")
-def confirmar_asistencia(datos: dict):
+def confirmar_asistencia(datos: dict, usuario_actual: dict = Depends(obtener_usuario_actual)):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
+    conn = None
 
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET confirmacionAsistencia = 'CONFIRMADA'
             WHERE idEquipo = %s AND idTorneo = %s;
         """, (id_equipo, id_torneo))
+        
         conn.commit()
-
         return {"mensaje": "Asistencia confirmada correctamente."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
+
 
 #Rechazar inscripción de un equipo en un torneo
 @router.post("/rechazar_inscripcion")
-def rechazar_inscripcion(datos: dict):
+def rechazar_inscripcion(datos: dict, usuario_actual: dict = Depends(obtener_usuario_actual)):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
+    conn = None
 
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET confirmacionInscripcion = 'RECHAZADA'
             WHERE idEquipo = %s AND idTorneo = %s;
         """, (id_equipo, id_torneo))
+        
         conn.commit()
-
         return {"mensaje": "Inscripción rechazada correctamente."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
+
 
 #Rechazar asistencia de un equipo en un torneo
 @router.post("/rechazar_asistencia")
-def rechazar_asistencia(datos: dict):
+def rechazar_asistencia(
+    datos: dict,
+    usuario_actual: dict = Depends(obtener_usuario_actual)
+):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
+    conn = None
 
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET confirmacionAsistencia = 'RECHAZADA'
             WHERE idEquipo = %s AND idTorneo = %s;
         """, (id_equipo, id_torneo))
+        
         conn.commit()
-
         return {"mensaje": "Asistencia rechazada correctamente."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
-#Aceptar inscripción de un equipo en un torneo
+
+#Aceptar inscripción de un equipo en un torneo (Reseteo)
 @router.post("/aceptar_inscripcion")
-def aceptar_inscripcion(datos: dict):
+def aceptar_inscripcion(
+    datos: dict,
+    usuario_actual: dict = Depends(obtener_usuario_actual)
+):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
+    conn = None
 
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET 
@@ -572,34 +710,103 @@ def aceptar_inscripcion(datos: dict):
                 confirmacionAsistencia = 'PENDIENTE'
             WHERE idEquipo = %s AND idTorneo = %s;
         """, (id_equipo, id_torneo))
+        
         conn.commit()
         return {"mensaje": "Inscripción aceptada de nuevo"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {"error": str(e)}
     finally:
-        if conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
-
-#Deshacer confirmación de asistencia de un equipo en un torneo
+#Deshacer confirmación de asistencia
 @router.post("/deshacer_asistencia")
-def deshacer_asistencia(datos: dict):
+def deshacer_asistencia(datos: dict, usuario_actual: dict = Depends(obtener_usuario_actual)):
     id_equipo = datos.get("idEquipo")
     id_torneo = datos.get("idTorneo")
-
+    conn = None
     try:
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(status_code=403, detail="No tienes permiso para gestionar este torneo")
+
         cursor.execute("""
             UPDATE Equipo_Torneo
             SET confirmacionAsistencia = 'PENDIENTE'
             WHERE idEquipo = %s AND idTorneo = %s;
         """, (id_equipo, id_torneo))
+        
         conn.commit()
-
         return {"mensaje": "Asistencia devuelta a pendiente."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
-        if conn.is_connected():
+        if conn and conn.is_connected():
             conn.close()
 
+#Editar datos de un torneo
+@router.put("/editar_torneo/{id_torneo}")
+def editar_torneo(id_torneo: int, torneo: Torneo, usuario_actual: dict = Depends(obtener_usuario_actual)):
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        torneo_db = cursor.fetchone()
+
+        if not torneo_db:
+            raise HTTPException(status_code=404, detail="El torneo no existe")
+
+        if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
+            raise HTTPException(
+                status_code=403,
+                detail="No tienes permiso para editar este torneo"
+            )
+        if torneo_db["estado"] != "PLANIFICADO":
+            raise HTTPException(
+                status_code=400, 
+                detail="No se puede editar un torneo que no está pendiente de comenzar."
+            )
+
+        cursor.execute("""
+            UPDATE Torneo
+            SET nombre = %s, descripcion = %s, precioInscripcion = %s,
+                numeroRondas = %s, duracionRondas = %s, fechaHoraInicio = %s,
+                lugarCelebracion = %s, plazasMax = %s, idFormatoTorneo = %s,
+                idJuego = %s, idFormatoJuego = %s, idLiga = %s,
+                premios = %s, estado = %s
+            WHERE idTorneo = %s;
+        """, (
+            torneo.nombre, torneo.descripcion, torneo.precioInscripcion,
+            torneo.numeroRondas, torneo.duracionRondas, torneo.fechaHoraInicio,
+            torneo.lugarCelebracion, torneo.plazasMax, torneo.idFormatoTorneo,
+            torneo.idJuego, torneo.idFormatoJuego, torneo.idLiga,
+            torneo.premios, torneo.estado,
+            id_torneo
+        ))
+
+        conn.commit()
+        return {"mensaje": "Torneo actualizado correctamente"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn and conn.is_connected():
+            conn.close()

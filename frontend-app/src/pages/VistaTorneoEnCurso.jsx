@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../api/auth";
 
 export default function DetalleTorneoEnCurso() {
   const { slug } = useParams();
@@ -26,7 +27,7 @@ export default function DetalleTorneoEnCurso() {
       try {
         setCargando(true);
         const res = await fetch(
-          `http://localhost:8000/rondas/${idTorneo}/ronda-actual`,
+          `${API_URL}/rondas/${idTorneo}/ronda-actual`,
           { credentials: "include" }
         );
 

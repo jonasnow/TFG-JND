@@ -17,7 +17,7 @@ export default function Home() {
                 {loading
                     ? "Bienvenido a Gestorneos"
                     : user
-                        ? `Bienvenido a Gestorneos, ${user.nombre}`
+                        ? `Bienvenido a Gestorneos, ${user.usuario}`
                         : "Bienvenido a Gestorneos"}
             </h1>
 

@@ -1,57 +1,58 @@
 import { createContext, useState, useEffect, useContext } from "react";
+import { API_URL } from "../api/auth";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); //nombre, email, idUsuario
+  const [user, setUser] = useState(null); //{usuario, email, idUsuario}
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const res = await fetch("http://localhost:8000/me", {
-          credentials: "include",
-        });
+  const checkSession = async () => {
+    try {
+      const res = await fetch(`${API_URL}/me`, {
+        credentials: "include",
+      });
 
-        if (!res.ok) {
-          setUser(null);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!data || !data.usuario || !data.idUsuario) {
-          setUser(null);
-          return;
-        }
-
-        setUser({
-          nombre: data.usuario,
-          email: data.email,
-          idUsuario: data.idUsuario,
-        });
-      } catch {
+      if (!res.ok) {
         setUser(null);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    fetchMe();
+      const data = await res.json();
+
+      if (!data || !data.usuario) {
+        setUser(null);
+        return;
+      }
+
+      setUser(data); 
+
+    } catch (error) {
+      console.error("Error verificando sesión:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkSession();
   }, []);
 
-
-
   const logout = async () => {
-    await fetch("http://localhost:8000/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+    try {
+      await fetch(`${API_URL}/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    }
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, logout, loading, checkSession }}>
       {children}
     </AuthContext.Provider>
   );

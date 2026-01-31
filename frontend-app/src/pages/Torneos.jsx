@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SidebarFilter from "../components/SidebarFilter";
+import { API_URL } from "../api/auth";
 
 export default function Torneos() {
   const [torneos, setTorneos] = useState([]);
@@ -10,7 +11,8 @@ export default function Torneos() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [paginaActual, setPaginaActual] = useState(1);
-  const torneosPorPagina = 12;
+  const torneosPorPagina = 9;
+
   const [filtros, setFiltros] = useState({
     precio_min: "",
     precio_max: "",
@@ -19,40 +21,57 @@ export default function Torneos() {
     lugar: "",
     juego: ""
   });
-  const [menuAbierto, setMenuAbierto] = useState(false);
 
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTorneos = async () => {
+    const fetchData = async () => {
+      setCargando(true);
       try {
-        const response = await fetch("http://localhost:8000/torneos_vigentes");
-        const data = await response.json();
-        setTorneosOriginales(data);
-        setTorneos(data);
+        const resTorneos = await fetch(`${API_URL}/torneos_vigentes`);
+
+        if (!resTorneos.ok) {
+          throw new Error(`Error HTTP: ${resTorneos.status}`);
+        }
+
+        const dataTorneos = await resTorneos.json();
+
+        if (Array.isArray(dataTorneos)) {
+          setTorneosOriginales(dataTorneos);
+          setTorneos(dataTorneos);
+        } else {
+          setTorneos([]);
+        }
+
+        try {
+          const resJuegos = await fetch(`${API_URL}/juegos`);
+          if (resJuegos.ok) {
+            const dataJuegos = await resJuegos.json();
+            setJuegos(dataJuegos);
+          }
+        } catch (e) {
+          console.warn("No se pudieron cargar los juegos.");
+        }
+
       } catch (err) {
-        setError("Error al cargar torneos");
+        console.error(err);
+        if (err.message.includes("Failed to fetch") || err.name === "TypeError") {
+          setError("No se puede conectar con el servidor.");
+        } else {
+          setError("Error al cargar los torneos.");
+        }
       } finally {
         setCargando(false);
       }
     };
 
-
-    const fetchJuegos = async () => {
-      try {
-        const response = await fetch("http://localhost:8000/juegos");
-        const data = await response.json();
-        setJuegos(data);
-      } catch (err) {
-        console.error("Error cargando juegos");
-      }
-    };
-
-    fetchTorneos();
-    fetchJuegos();
+    fetchData();
   }, []);
 
   useEffect(() => {
+    if (!Array.isArray(torneosOriginales)) return;
+
     let resultado = torneosOriginales;
 
     if (busqueda.trim() !== "") {
@@ -65,77 +84,10 @@ export default function Torneos() {
     setPaginaActual(1);
   }, [busqueda, torneosOriginales]);
 
-
-  if (cargando)
-    return (
-      <p className="text-center mt-6 text-[var(--color-text)] font-play">
-        Cargando torneos...
-      </p>
-    );
-
-  if (error)
-    return (
-      <p className="text-center mt-6 text-red-600 font-semibold font-play">{error}</p>
-    );
-
-  const indiceUltimoTorneo = paginaActual * torneosPorPagina;
-  const indicePrimerTorneo = indiceUltimoTorneo - torneosPorPagina;
-  const torneosActuales = torneos.slice(indicePrimerTorneo, indiceUltimoTorneo);
-  const totalPaginas = Math.ceil(torneos.length / torneosPorPagina);
-
-  const cambiarPagina = (num) => {
-    setPaginaActual(num);
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 0);
-  };
-
-  const botonesPaginacion =
-    totalPaginas > 1 ? (
-      <div className="flex justify-center mt-6 space-x-2 flex-wrap">
-        <button
-          onClick={() => cambiarPagina(paginaActual - 1)}
-          className={`
-      w-10 px-3 py-1 rounded font-play 
-      ${paginaActual > 1
-              ? "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]"
-              : "invisible"
-            }
-    `}
-        >
-          &lt;
-        </button>
-
-        {Array.from({ length: totalPaginas }, (_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => cambiarPagina(i + 1)}
-            className={`
-        w-10 px-3 py-1 rounded font-play text-center
-        ${paginaActual === i + 1
-                ? "bg-[var(--color-primary)] text-white"
-                : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]"
-              }
-      `}
-          >
-            {i + 1}
-          </button>
-        ))}
-
-        <button
-          onClick={() => cambiarPagina(paginaActual + 1)}
-          className={`w-10 px-3 py-1 rounded font-play ${paginaActual < totalPaginas ? "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]" : "invisible"
-            }`}
-        >
-          &gt;
-        </button>
-      </div>
-
-    ) : null;
-
-  const buscarTorneos = async () => {
+  const buscarTorneosBackend = async () => {
+    setCargando(true);
     try {
-      const response = await fetch("http://localhost:8000/torneos_vigentes_filtrados", {
+      const response = await fetch(`${API_URL}/torneos_vigentes_filtrados`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,86 +99,151 @@ export default function Torneos() {
           juego: filtros.juego || null
         })
       });
+
       const data = await response.json();
-      setTorneos(data);
-      setPaginaActual(1);
+
+      if (Array.isArray(data)) {
+        setTorneosOriginales(data);
+        setTorneos(data);
+        setPaginaActual(1);
+      } else {
+        setTorneos([]);
+      }
+
+      if (window.innerWidth < 768) setMenuAbierto(false);
+
     } catch (err) {
-      console.error("Error filtrando torneos", err);
+      setError("Error al filtrar los torneos.");
+    } finally {
+      setCargando(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
+  const indiceUltimoTorneo = paginaActual * torneosPorPagina;
+  const indicePrimerTorneo = indiceUltimoTorneo - torneosPorPagina;
+  const listaTorneos = Array.isArray(torneos) ? torneos : [];
+  const torneosActuales = listaTorneos.slice(indicePrimerTorneo, indiceUltimoTorneo);
+  const totalPaginas = Math.ceil(listaTorneos.length / torneosPorPagina);
 
-      <div className="pt-16 px-8">
+  const cambiarPagina = (num) => {
+    setPaginaActual(num);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
+  const Paginacion = () => {
+    if (totalPaginas <= 1) return null;
+    const paginas = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+    return (
+      <div className="flex justify-center mt-8 gap-2 flex-wrap">
         <button
-          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg mb-6"
-          onClick={() => setMenuAbierto(!menuAbierto)}
+          onClick={() => cambiarPagina(paginaActual - 1)}
+          disabled={paginaActual === 1}
+          className={`px-3 py-1 rounded font-play transition-colors ${paginaActual === 1 ? "opacity-50 cursor-not-allowed" : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-secondary)]"}`}
         >
-          🔍 Buscar
+          &lt;
         </button>
+        {paginas.map((num) => (
+          <button
+            key={num}
+            onClick={() => cambiarPagina(num)}
+            className={`w-10 px-3 py-1 rounded font-play text-center transition-colors ${paginaActual === num ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-secondary)]"}`}
+          >
+            {num}
+          </button>
+        ))}
+        <button
+          onClick={() => cambiarPagina(paginaActual + 1)}
+          disabled={paginaActual === totalPaginas}
+          className={`px-3 py-1 rounded font-play transition-colors ${paginaActual === totalPaginas ? "opacity-50 cursor-not-allowed" : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-secondary)]"}`}
+        >
+          &gt;
+        </button>
+      </div>
+    );
+  };
 
-        <div className="flex transition-all duration-300">
+  return (
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play flex flex-col">
+      <div className="flex flex-1 relative">
 
-          <SidebarFilter
-            abierto={menuAbierto}
-            filtros={filtros}
-            setFiltros={setFiltros}
-            onBuscar={buscarTorneos}
-            busqueda={busqueda}
-            setBusqueda={setBusqueda}
-            juegos={juegos}
-          />
+        {menuAbierto && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+            onClick={() => setMenuAbierto(false)}
+          ></div>
+        )}
 
+        <SidebarFilter
+          abierto={menuAbierto}
+          setMenuAbierto={setMenuAbierto}
+          filtros={filtros}
+          setFiltros={setFiltros}
+          onBuscar={buscarTorneosBackend}
+          busqueda={busqueda}
+          setBusqueda={setBusqueda}
+          juegos={juegos}
+        />
 
-          <div className={`flex-1 transition-all duration-500 ${menuAbierto ? "md:pl-8" : "md:pl-0"} ml-0`}>
-            <h1 className="text-3xl font-bold text-center mb-8">Torneos Vigentes</h1>
+        <div className={`flex-1 p-6 transition-all duration-300 ${menuAbierto ? "md:ml-80" : "ml-0"}`}>
 
-            {botonesPaginacion}
-
-            {torneosActuales.length === 0 ? (
-              <p className="text-center text-[var(--color-text)] mt-6">
-                No hay torneos vigentes en este momento.
-              </p>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                {torneosActuales.map((torneo) => (
-                  <div key={torneo.idTorneo} className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-6 flex flex-col justify-between">
-                    <div className="flex justify-between items-start gap-4 mb-4">
-                      <h2 className="text-xl font-semibold flex-1">
-                        {torneo.nombre}
-                      </h2>
-                      <div className="w-[80px] h-[80px] flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-inner">
-                        <img
-                          src={torneo.logoJuego}
-                          alt={torneo.nombreJuego}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[var(--color-text)] text-sm mb-2">{"En " + torneo.lugarCelebracion}</p>
-                      <p className="text-gray-500 text-sm mb-4">{new Date(torneo.fechaHoraInicio).toLocaleString() + " hora local"}</p>
-                      <p className="text-[var(--color-text)] mb-4">{torneo.nombreJuego}</p>
-                      <p className="text-[var(--color-text)] mb-4">{"Precio inscripción: " + torneo.precioInscripcion + "€"}</p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        navigate(`/torneo/${torneo.nombre.replace(/\s+/g, "-")}-${torneo.idTorneo}`)
-                      }
-                      className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-                    >
-                      Ver detalles
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {botonesPaginacion}
+          <div className="relative flex items-center justify-center mb-8 h-12">
+            <div className="absolute left-0 top-0 h-full flex items-center">
+              <button
+                className={`bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md hover:bg-[var(--color-secondary)] transition ${menuAbierto ? "hidden md:flex opacity-0 pointer-events-none" : "flex"}`}
+                onClick={() => setMenuAbierto(true)}
+              >
+                <span>🔍</span> <span className="hidden sm:inline">Filtros</span>
+              </button>
+            </div>
+            <h1 className="text-3xl font-bold text-center">Torneos Vigentes</h1>
           </div>
 
+          {error && (
+            <div className="text-center p-4 bg-red-100 text-red-600 rounded-lg mb-6 border border-red-200">
+              <p className="font-bold">Error</p>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {cargando ? (
+            <div className="flex justify-center mt-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <Paginacion />
+              </div>
+              {listaTorneos.length === 0 ? (
+                <div className="text-center py-10 opacity-70 bg-[var(--color-bg-secondary)] rounded-2xl">
+                  <p className="text-xl">No se encontraron torneos.</p>
+                  <button onClick={() => window.location.reload()} className="mt-2 text-[var(--color-primary)] underline">Recargar</button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {torneosActuales.map((torneo) => (
+                    <div key={torneo.idTorneo} className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-5 flex flex-col h-full hover:shadow-xl transition-shadow border border-transparent hover:border-[var(--color-primary)]">
+                      <div className="flex justify-between items-start gap-3 mb-3">
+                        <h2 className="text-lg font-bold line-clamp-2 leading-tight flex-1" title={torneo.nombre}>{torneo.nombre}</h2>
+                        <div className="w-12 h-12 flex-shrink-0 bg-white rounded-lg p-1 shadow-sm">
+                          <img src={torneo.logoJuego} alt={torneo.nombreJuego} className="w-full h-full object-contain" />
+                        </div>
+                      </div>
+                      <div className="text-sm space-y-2 flex-1 mb-4 opacity-90">
+                        <p>{torneo.lugarCelebracion}</p>
+                        <p>{new Date(torneo.fechaHoraInicio).toLocaleDateString()}</p>
+                        <p>{torneo.nombreJuego}</p>
+                        <p className="font-semibold text-[var(--color-primary)] mt-1">{torneo.precioInscripcion > 0 ? `${torneo.precioInscripcion}€` : "Gratis"}</p>
+                      </div>
+                      <button onClick={() => navigate(`/torneo/${torneo.nombre.replace(/\s+/g, "-")}-${torneo.idTorneo}`)} className="w-full bg-[var(--color-primary)] text-white py-2 rounded-lg font-bold hover:bg-[var(--color-secondary)] transition shadow-sm">Ver Detalles</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Paginacion />
+            </>
+          )}
         </div>
       </div>
     </div>

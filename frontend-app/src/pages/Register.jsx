@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { API_URL } from "../api/auth";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ export default function Register() {
     setProcesando(true);
 
     try {
-      const response = await fetch("http://localhost:8000/register", {
+      const response = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -57,18 +58,18 @@ export default function Register() {
 
       await new Promise(res => setTimeout(res, 1200));
 
-      if (response.ok && !result.error) {
-        setMensaje("Registrado correctamente.");
+      if (response.ok) {
+        setMensaje(result.mensaje || "Registrado correctamente.");
         setExito(true);
       } else {
-        setMensaje(result.error || "Error al crear el usuario.");
+        setMensaje(result.detail || "Error al crear el usuario.");
         setExito(false);
       }
 
       setMostrarResultado(true);
 
     } catch (err) {
-      setMensaje("Error: " + err.message);
+      setMensaje("Error de conexión: " + err.message);
       setExito(false);
       setMostrarResultado(true);
     } finally {

@@ -31,8 +31,8 @@ CREATE TABLE `Enfrentamiento` (
   `idEnfrentamiento` int NOT NULL,
   `sitioAsignado` varchar(100) DEFAULT NULL,
   `numeroRonda` int NOT NULL,
-  `resultado` varchar(100) DEFAULT NULL,
-  `marcador` varchar(20) DEFAULT NULL,
+  `resultado`TEXT DEFAULT NULL,
+  `marcador` TEXT DEFAULT NULL,
   `idTorneo` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -42,7 +42,7 @@ CREATE TABLE `Enfrentamiento` (
 
 CREATE TABLE `Equipo` (
   `idEquipo` int NOT NULL,
-  `nombre` varchar(100) NOT NULL
+  `nombre` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -50,14 +50,14 @@ CREATE TABLE `Equipo` (
 --
 
 INSERT INTO `Equipo` (`idEquipo`, `nombre`) VALUES
-(1, 'Admin Istrador'),
-(2, 'Luis Martínez López'),
-(3, 'Carmen Santos Díaz'),
-(4, 'Javier Morales Pérez'),
-(5, 'Marta Rico Torres'),
-(6, 'Raúl Castro Vega'),
-(7, 'Elena Navarro Gil'),
-(8, 'Carlos Herrera León'),
+(1, NULL),
+(2, NULL),
+(3, NULL),
+(4, NULL),
+(5, NULL),
+(6, NULL),
+(7, NULL),
+(8, NULL),
 (9, 'Equipo Alpha'),
 (10, 'Equipo Beta');
 
@@ -69,7 +69,8 @@ INSERT INTO `Equipo` (`idEquipo`, `nombre`) VALUES
 
 CREATE TABLE `Equipo_Enfrentamiento` (
   `idEquipo` int NOT NULL,
-  `idEnfrentamiento` int NOT NULL
+  `idEnfrentamiento` int NOT NULL,
+  `puntosObtenidos` int DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
@@ -187,7 +188,7 @@ CREATE TABLE `FormatoTorneo` (
 --
 
 INSERT INTO `FormatoTorneo` (`idFormatoTorneo`, `nombre`) VALUES
-(1, 'Free-for-All'),
+(1, 'Aleatorio sin eliminaciones'),
 (2, 'Eliminación Directa'),
 (3, 'Round Robin'),
 (4, 'Suizo');

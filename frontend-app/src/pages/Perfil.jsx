@@ -2,14 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SidebarPerfil from "../components/SidebarPerfil";
+import { API_URL } from "../api/auth";
 
 export default function Perfil() {
   const { user } = useAuth();
+
   const [activeTab, setActiveTab] = useState("datos");
+
+  const [menuAbierto, setMenuAbierto] = useState(() => window.innerWidth >= 768); //Abierto por defecto en escritorio, cerrado en móvil
+
   const [torneosParticipas, setTorneosParticipas] = useState([]);
   const [torneosOrganizas, setTorneosOrganizas] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+  const [cargandoTorneos, setCargandoTorneos] = useState(false);
+  const [errorTorneos, setErrorTorneos] = useState(null);
 
   const [datosUsuario, setDatosUsuario] = useState(null);
   const [cargandoDatos, setCargandoDatos] = useState(false);
@@ -37,14 +42,12 @@ export default function Perfil() {
   });
   const [errorPassword, setErrorPassword] = useState("");
 
-
   const [filtrosPerfil, setFiltrosPerfil] = useState({
     nombre: "",
     fecha_inicio: "",
     fecha_fin: "",
     juego: ""
   });
-
 
   const [paginaActual, setPaginaActual] = useState(1);
   const torneosPorPagina = 12;
@@ -53,645 +56,251 @@ export default function Perfil() {
   const location = useLocation();
 
   useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && !menuAbierto) {}
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [menuAbierto]);
+
+  useEffect(() => {
     const fetchJuegos = async () => {
       try {
-        const response = await fetch("http://localhost:8000/juegos");
-        const data = await response.json();
-        setJuegos(data);
-      } catch (err) {
-        console.error("Error cargando juegos", err);
-      }
+        const response = await fetch(`${API_URL}/juegos`);
+        if (response.ok) setJuegos(await response.json());
+      } catch (err) { console.error(err); }
     };
-
     fetchJuegos();
   }, []);
 
-  const filtrarTorneos = (torneos) => {
-    return torneos.filter((torneo) => {
-      const nombreOK =
-        !filtrosPerfil.nombre ||
-        torneo.Nombre.toLowerCase().includes(filtrosPerfil.nombre.toLowerCase());
-
-      const juegoOK =
-        !filtrosPerfil.juego ||
-        torneo.Juego === filtrosPerfil.juego;
-
-      const fechaTorneo = new Date(torneo.FechaHoraInicio);
-
-      const fechaInicioOK =
-        !filtrosPerfil.fecha_inicio ||
-        fechaTorneo >= new Date(filtrosPerfil.fecha_inicio);
-
-      const fechaFinOK =
-        !filtrosPerfil.fecha_fin ||
-        fechaTorneo <= new Date(filtrosPerfil.fecha_fin);
-
-      return nombreOK && juegoOK && fechaInicioOK && fechaFinOK;
-    });
-  };
-
-
-
   useEffect(() => {
-    if (!user?.email) {
-      setCargando(false);
-      return;
-    }
-
-
-    const fetchData = async () => {
+    if (activeTab !== "participar" && activeTab !== "organizar") return;
+    if (!user) return;
+    const fetchTorneos = async () => {
+      setCargandoTorneos(true);
       try {
         const [respParticipas, respOrganizas] = await Promise.all([
-          fetch(`http://localhost:8000/torneos_usuario/${user.idUsuario}`, {
-            credentials: "include",
-          }),
-          fetch(`http://localhost:8000/torneos_organizador/${user.idUsuario}`, {
-            credentials: "include",
-          }),
+          fetch(`${API_URL}/torneos_usuario`, { credentials: "include" }),
+          fetch(`${API_URL}/torneos_organizador`, { credentials: "include" }),
         ]);
-
-        if (!respParticipas.ok || !respOrganizas.ok)
-          throw new Error("Error al cargar torneos");
-
-        const dataParticipas = await respParticipas.json();
-        const dataOrganizas = await respOrganizas.json();
-
-        setTorneosParticipas(dataParticipas);
-        setTorneosOrganizas(dataOrganizas);
-      } catch (err) {
-        console.error(err);
-        setError("No se han podido cargar los torneos.");
-      } finally {
-        setCargando(false);
-      }
-    };
-
-    fetchData();
-  }, [user]);
-
-  useEffect(() => {
-    if (activeTab !== "datos" || !user?.idUsuario) return;
-
-    const fetchDatosUsuario = async () => {
-      try {
-        setCargandoDatos(true);
-        setErrorDatos(null);
-
-        const response = await fetch(
-          `http://localhost:8000/datos_usuario/${user.idUsuario}`,
-          { credentials: "include" }
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al cargar los datos del usuario");
+        if (respParticipas.ok && respOrganizas.ok) {
+          setTorneosParticipas(await respParticipas.json());
+          setTorneosOrganizas(await respOrganizas.json());
         }
-
-        const data = await response.json();
-        setDatosUsuario(data);
-      } catch (err) {
-        console.error(err);
-        setErrorDatos("No se han podido cargar los datos personales.");
-      } finally {
-        setCargandoDatos(false);
-      }
+      } catch (err) { setErrorTorneos("Error cargando torneos."); }
+      finally { setCargandoTorneos(false); }
     };
-
-    fetchDatosUsuario();
+    fetchTorneos();
   }, [activeTab, user]);
+
   useEffect(() => {
-    if (activeTab !== "historial" || !user?.idUsuario) return;
-
-    const fetchHistorial = async () => {
+    if (activeTab !== "datos" || !user) return;
+    const fetchDatos = async () => {
+      setCargandoDatos(true);
       try {
-        setCargandoHistorial(true);
-        setErrorHistorial(null);
-
-        const response = await fetch(
-          `http://localhost:8000/historial_usuario/${user.idUsuario}`,
-          { credentials: "include" }
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al cargar el historial");
-        }
-
-        const data = await response.json();
-        setHistorialTorneos(data);
-      } catch (err) {
-        console.error(err);
-        setErrorHistorial("No se ha podido cargar el historial de torneos.");
-      } finally {
-        setCargandoHistorial(false);
-      }
+        const res = await fetch(`${API_URL}/perfil`, { credentials: "include" });
+        if (res.ok) setDatosUsuario(await res.json());
+      } catch (err) { setErrorDatos("Error cargando perfil."); }
+      finally { setCargandoDatos(false); }
     };
+    fetchDatos();
+  }, [activeTab, user]);
 
+  useEffect(() => {
+    if (activeTab !== "historial" || !user) return;
+    const fetchHistorial = async () => {
+      setCargandoHistorial(true);
+      try {
+        const res = await fetch(`${API_URL}/historial_usuario`, { credentials: "include" });
+        if (res.ok) setHistorialTorneos(await res.json());
+      } catch (err) { setErrorHistorial("Error historial."); }
+      finally { setCargandoHistorial(false); }
+    };
     fetchHistorial();
   }, [activeTab, user]);
 
   useEffect(() => {
     if (!mensajeExito) return;
-
-    const timer = setTimeout(() => {
-      setMensajeExito("");
-    }, 3000);
-
+    const timer = setTimeout(() => setMensajeExito(""), 3000);
     return () => clearTimeout(timer);
   }, [mensajeExito]);
 
-  //Cambiar de página y subir arriba
-  const cambiarPagina = (num) => {
-    setPaginaActual(num);
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 0);
+  const filtrarTorneos = (torneos) => {
+    if (!Array.isArray(torneos)) return [];
+    return torneos.filter((torneo) => {
+      const nombreOK = !filtrosPerfil.nombre || torneo.Nombre.toLowerCase().includes(filtrosPerfil.nombre.toLowerCase());
+      const juegoOK = !filtrosPerfil.juego || torneo.Juego === filtrosPerfil.juego;
+      const fechaTorneo = new Date(torneo.FechaHoraInicio);
+      const fechaInicioOK = !filtrosPerfil.fecha_inicio || fechaTorneo >= new Date(filtrosPerfil.fecha_inicio);
+      const fechaFinOK = !filtrosPerfil.fecha_fin || fechaTorneo <= new Date(filtrosPerfil.fecha_fin);
+      return nombreOK && juegoOK && fechaInicioOK && fechaFinOK;
+    });
   };
 
-  const renderTorneos = (torneos) => {
-    if (torneos.length === 0)
-      return <p className="text-center text-[var(--color-text)] font-play">No hay torneos en esta categoría.</p>;
+  const formatearEstado = (estado) => estado ? estado.toLowerCase().replace(/_/g, " ").replace(/^./, c => c.toUpperCase()) : "";
 
-    const indiceUltimoTorneo = paginaActual * torneosPorPagina;
-    const indicePrimerTorneo = indiceUltimoTorneo - torneosPorPagina;
-    const torneosActuales = torneos.slice(indicePrimerTorneo, indiceUltimoTorneo);
-    const totalPaginas = Math.ceil(torneos.length / torneosPorPagina);
+ const renderTorneos = (listaTorneos) => {
+    if (cargandoTorneos) return <p className="text-center mt-10">Cargando...</p>;
+    if (listaTorneos.length === 0) return <p className="text-center mt-10 opacity-70">No hay torneos en esta sección.</p>;
 
-    const botonesPaginacion = totalPaginas > 1 && (
-      <div className="flex justify-center mt-6 space-x-2 flex-wrap">
-        {paginaActual > 1 && (
-          <button
-            onClick={() => cambiarPagina(paginaActual - 1)}
-            className="px-3 py-1 rounded font-play bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]"
-          >
-            &lt;
-          </button>
-        )}
+    const indiceUltimo = paginaActual * torneosPorPagina;
+    const indicePrimero = indiceUltimo - torneosPorPagina;
+    const torneosActuales = listaTorneos.slice(indicePrimero, indiceUltimo);
+    const totalPaginas = Math.ceil(listaTorneos.length / torneosPorPagina);
 
-        {Array.from({ length: totalPaginas }, (_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => cambiarPagina(i + 1)}
-            className={`px-3 py-1 rounded font-play ${paginaActual === i + 1
-              ? "bg-[var(--color-primary)] text-white"
-              : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]"
-              }`}
-          >
-            {i + 1}
-          </button>
-        ))}
-
-        {paginaActual < totalPaginas && (
-          <button
-            onClick={() => cambiarPagina(paginaActual + 1)}
-            className="px-3 py-1 rounded font-play bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-secondary)]"
-          >
-            &gt;
-          </button>
-        )}
-      </div>
-    );
-
-
-    const formatearEstado = (estado) => {
-      if (!estado) return "";
-
-      return estado
-        .toLowerCase()
-        .replace(/_/g, " ")
-        .replace(/^./, (c) => c.toUpperCase());
+    const cambiarPagina = (num) => {
+        setPaginaActual(num);
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
-
-
-
 
     return (
       <>
-        {botonesPaginacion}
+        {totalPaginas > 1 && (
+            <div className="flex justify-center mt-4 mb-6 space-x-2">
+                <button onClick={() => cambiarPagina(paginaActual - 1)} disabled={paginaActual === 1} className={`px-3 py-1 rounded ${paginaActual === 1 ? 'opacity-50' : 'hover:bg-gray-700'} bg-[var(--color-bg-secondary)]`}> &lt; </button>
+                <span className="px-3 py-1">Página {paginaActual} de {totalPaginas}</span>
+                <button onClick={() => cambiarPagina(paginaActual + 1)} disabled={paginaActual === totalPaginas} className={`px-3 py-1 rounded ${paginaActual === totalPaginas ? 'opacity-50' : 'hover:bg-gray-700'} bg-[var(--color-bg-secondary)]`}> &gt; </button>
+            </div>
+        )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-          {torneosActuales.map((torneo, index) => (
-            <div
-              key={index}
-              className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-6 flex flex-col justify-between"
-            >
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {torneosActuales.map((torneo) => (
+            <div key={torneo.idTorneo} className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-6 flex flex-col justify-between hover:shadow-xl transition-shadow">
               <div>
-                <div className="flex justify-between items-start gap-4 mb-4">
-                  <h2 className="text-xl font-semiboldtext-[var(--color-text)]">{torneo.Nombre}</h2>
-                  <div className="w-[80px] h-[80px] flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-inner">
-                    <img
-                      src={torneo.logoJuego}
-                      alt={torneo.nombreJuego}
-                      className="w-full h-full object-contain p-2"
-                    />
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <h2 className="text-lg font-bold leading-tight flex-1">{torneo.Nombre}</h2>
+                  <div className="w-12 h-12 flex-shrink-0 bg-white rounded-lg p-1">
+                    <img src={torneo.logoJuego} alt={torneo.Juego} className="w-full h-full object-contain" onError={(e)=>{e.target.src="https://via.placeholder.com/50"}}/>
                   </div>
                 </div>
-                <p className="text-[var(--color-text)] text-sm mb-2">{torneo.LugarCelebracion}</p>
-                <p className="text-gray-500 text-sm mb-2">{new Date(torneo.FechaHoraInicio).toLocaleString()}</p>
-                <p className="text-[var(--color-text)] mb-2"><strong>Juego:</strong> {torneo.Juego}</p>
-                <p className="text-[var(--color-text)] mb-2"><strong>Formato del juego:</strong> {torneo.FormatoJuego}</p>
-                <p className="text-[var(--color-text)] mb-2"><strong>Formato del torneo:</strong> {torneo.FormatoTorneo}</p>
-                <p className="text-[var(--color-text)] mb-4">{torneo.Descripcion}</p>
-                <div className="text-sm text-[var(--color-text)] space-y-1">
-                  <p><strong>Precio:</strong> {torneo.Precio} €</p>
-                  <p><strong>Rondas:</strong> {torneo.Rondas}</p>
-                  <p><strong>Plazas máximas:</strong> {torneo.PlazasMax}</p>
-                  <p><strong>Duración de las rondas:</strong> {torneo.DuracionRondas} min</p>
-                  <p><strong>Premios:</strong> {torneo.Premios}</p>
-                  <p><strong>Estado:</strong> {formatearEstado(torneo.Estado)}</p>
+                
+                <div className="mb-3">
+                    {torneo.EstadoInscripcion === "CONFIRMADA" && (
+                        <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded border border-green-500/30 font-bold block w-fit">
+                            ✅ Inscripción Confirmada
+                        </span>
+                    )}
+                    {torneo.EstadoInscripcion === "PENDIENTE" && (
+                        <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded border border-yellow-500/30 font-bold block w-fit">
+                            ⏳ Pendiente de Aprobación
+                        </span>
+                    )}
+                    {torneo.EstadoInscripcion === "RECHAZADA" && (
+                        <span className="bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded border border-red-500/30 font-bold block w-fit">
+                            ❌ Inscripción Rechazada
+                        </span>
+                    )}
+                </div>
+
+                <div className="text-sm space-y-2 mb-4 opacity-90">
+                    <p> {torneo.LugarCelebracion}</p>
+                    <p> {new Date(torneo.FechaHoraInicio).toLocaleDateString()} {new Date(torneo.FechaHoraInicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p> {torneo.Juego}</p>
+                    <p> {torneo.Precio}€</p>
+                    <div className="inline-block px-2 py-1 rounded bg-[var(--color-bg)] border border-gray-600 text-xs">{formatearEstado(torneo.Estado)}</div>
                 </div>
               </div>
-
-              <button
-                onClick={() => navigate(`/torneo/${torneo.Nombre.replace(/\s+/g, "-")}-${torneo.idTorneo}`)}
-                className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-              >
-                Ver detalles
-              </button>
+              <button onClick={() => navigate(`/torneo/${torneo.Nombre.replace(/\s+/g, "-")}-${torneo.idTorneo}`)} className="w-full bg-[var(--color-primary)] text-white py-2 rounded-lg font-bold hover:bg-[var(--color-secondary)] transition">Ver Detalle</button>
             </div>
           ))}
         </div>
-        {botonesPaginacion}
       </>
     );
   };
 
-  if (!user)
-    return <div className="text-center mt-10 text-[var(--color-text)] font-play">No has iniciado sesión.
-      <div>
-        <button
-          onClick={() =>
-            navigate("/login", {
-              state: { from: location.pathname }
-            })
-          }
-          className="mt-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-        >
-          Iniciar sesión
-        </button>
-      </div>
-    </div>;
-
-
-
-  const renderDatosPersonales = () => {
-    if (cargandoDatos) {
-      return (
-        <p className="text-center text-[var(--color-text)]">
-          Cargando datos personales...
-        </p>
-      );
-    }
-
-    if (errorDatos) {
-      return (
-        <p className="text-center text-red-600 font-semibold">
-          {errorDatos}
-        </p>
-      );
-    }
-
-    if (!datosUsuario) return null;
-
-    if (modoEdicion && datosEditables) {
-      return (
-        <div className="max-w-3xl mx-auto bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-8">
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            Editar datos personales
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm text-gray-500">Nombre</label>
-              <input
-                value={datosEditables.nombre}
-                onChange={(e) =>
-                  setDatosEditables({ ...datosEditables, nombre: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[var(--color-bg)]"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-500">Apellidos</label>
-              <input
-                value={datosEditables.apellidos}
-                onChange={(e) =>
-                  setDatosEditables({ ...datosEditables, apellidos: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[var(--color-bg)]"
-              />
-            </div>
-            {/*
-            <div>
-              <label className="text-sm text-gray-500">
-                Email (no editable por ahora)
-              </label>
-              <input
-                value={datosEditables.email}
-                disabled
-                className="w-full p-2 rounded bg-gray-200 cursor-not-allowed opacity-70"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-500">
-                Teléfono (no editable por ahora)
-              </label>
-              <input
-                value={datosEditables.telefono || ""}
-                disabled
-                className="w-full p-2 rounded bg-gray-200 cursor-not-allowed opacity-70"
-              />
-            </div>
-            */}
-
-            <div>
-              <label className="text-sm text-gray-500">Localidad</label>
-              <input
-                value={datosEditables.localidad || ""}
-                onChange={(e) =>
-                  setDatosEditables({ ...datosEditables, localidad: e.target.value })
-                }
-                className="w-full p-2 rounded bg-[var(--color-bg)]"
-              />
-            </div>
-          </div>
-
-          {mostrarCambioPassword && (
-            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-              <div className="bg-[var(--color-bg-secondary)] p-6 rounded-2xl w-96">
-                <h2 className="text-xl font-bold mb-4 text-center">
-                  Cambiar contraseña
-                </h2>
-
-                <input
-                  type="password"
-                  placeholder="Contraseña actual"
-                  className="w-full p-2 mb-3 rounded"
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, passwordActual: e.target.value })
-                  }
-                />
-
-                <input
-                  type="password"
-                  placeholder="Nueva contraseña"
-                  className="w-full p-2 mb-3 rounded"
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, nuevaPassword: e.target.value })
-                  }
-                />
-
-                <input
-                  type="password"
-                  placeholder="Confirmar nueva contraseña"
-                  className="w-full p-2 mb-3 rounded"
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, confirmarPassword: e.target.value })
-                  }
-                />
-
-                {errorPassword && (
-                  <p className="text-red-500 text-sm text-center">{errorPassword}</p>
-                )}
-
-                <div className="flex justify-center gap-4 mt-4">
-                  <button
-                    onClick={guardarPassword}
-                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg"
-                  >
-                    Cambiar
-                  </button>
-                  <button
-                    onClick={cerrarCambioPassword}
-                    className="bg-gray-400 text-white px-4 py-2 rounded-lg"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-
-          {errorEdicion && (
-            <p className="text-red-500 text-center mt-4">{errorEdicion}</p>
-          )}
-          <div className="flex justify-center mt-6">
-            <button
-              type="button"
-              onClick={() => setMostrarCambioPassword(true)}
-              className="text-sm text-[var(--color-primary)] hover:underline"
-            >
-              Cambiar contraseña
-            </button>
-          </div>
-
-          <div className="flex justify-center gap-4 mt-8">
-            <button
-              onClick={() => setMostrarConfirmacionEdicion(true)}
-              className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg"
-            >
-              Guardar cambios
-            </button>
-
-            <button
-              onClick={() => setModoEdicion(false)}
-              className="bg-gray-400 text-white px-6 py-2 rounded-lg"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="max-w-3xl mx-auto bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-8">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          Datos personales
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-6 text-[var(--color-text)]">
-          <div>
-            <p className="text-sm text-gray-500">Nombre</p>
-            <p className="font-semibold">{datosUsuario.nombre}</p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Apellidos</p>
-            <p className="font-semibold">{datosUsuario.apellidos}</p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Email</p>
-            <p className="font-semibold">{datosUsuario.email}</p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Teléfono</p>
-            <p className="font-semibold">
-              {datosUsuario.telefono || "No indicado"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Localidad</p>
-            <p className="font-semibold">
-              {datosUsuario.localidad || "No indicada"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Fecha de registro</p>
-            <p className="font-semibold">
-              {new Date(datosUsuario.fechaRegistro).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8 text-center">
-          <button
-            onClick={iniciarEdicion}
-            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg hover:bg-[var(--color-secondary)] transition"
-          >
-            Editar datos
-          </button>
-        </div>
-      </div>
-    );
-  };
-  const iniciarEdicion = () => {
-    setDatosEditables({ ...datosUsuario });
-    setModoEdicion(true);
-  };
-  const guardarPassword = async () => {
-    if (passwordData.nuevaPassword !== passwordData.confirmarPassword) {
-      setErrorPassword("Las contraseñas no coinciden");
-      return;
-    }
-
-    const response = await fetch(
-      `http://localhost:8000/cambiar_password/${user.idUsuario}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(passwordData)
-      }
-    );
-
-    const result = await response.json();
-
-    if (result.error) {
-      setErrorPassword(result.error);
-    } else {
-      setMostrarCambioPassword(false);
-      setMensajeExito("Contraseña actualizada correctamente");
-    }
-  };
-  const cerrarCambioPassword = () => {
-    setMostrarCambioPassword(false);
-    setPasswordData({
-      passwordActual: "",
-      nuevaPassword: "",
-      confirmarPassword: ""
-    });
-    setErrorPassword("");
-  };
+  const iniciarEdicion = () => { setDatosEditables({ ...datosUsuario }); setModoEdicion(true); };
+  const cerrarCambioPassword = () => { setMostrarCambioPassword(false); setPasswordData({ passwordActual: "", nuevaPassword: "", confirmarPassword: "" }); setErrorPassword(""); };
 
   const guardarCambios = async () => {
     setProcesandoEdicion(true);
     setErrorEdicion(null);
-
     try {
-      const response = await fetch(
-        `http://localhost:8000/editar_datos_usuario/${user.idUsuario}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(datosEditables),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Error al guardar los cambios");
-      }
-
-      const data = await response.json();
-      setDatosUsuario((prev) => ({
-        ...prev,
-        ...datosEditables
-      }));
-      setMensajeExito("Datos actualizados correctamente");
+      const response = await fetch(`${API_URL}/editar_perfil`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(datosEditables),
+      });
+      if (!response.ok) throw new Error("Error al guardar");
+      setDatosUsuario(prev => ({ ...prev, ...datosEditables }));
+      setMensajeExito("Datos actualizados.");
       setModoEdicion(false);
-    } catch (err) {
-      setErrorEdicion("No se pudieron guardar los cambios");
-    } finally {
-      setProcesandoEdicion(false);
-      setMostrarConfirmacionEdicion(false);
-    }
+    } catch (err) { setErrorEdicion(err.message); }
+    finally { setProcesandoEdicion(false); setMostrarConfirmacionEdicion(false); }
   };
 
+  const guardarPassword = async () => {
+    if (passwordData.nuevaPassword !== passwordData.confirmarPassword) return setErrorPassword("No coinciden");
+    try {
+      const res = await fetch(`${API_URL}/cambiar_password`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ passwordActual: passwordData.passwordActual, nuevaPassword: passwordData.nuevaPassword })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail);
+      setMostrarCambioPassword(false);
+      setMensajeExito("Contraseña cambiada.");
+      setPasswordData({ passwordActual: "", nuevaPassword: "", confirmarPassword: "" });
+    } catch (err) { setErrorPassword(err.message); }
+  };
 
-  const renderHistorialTorneos = () => {
-    if (cargandoHistorial) {
+  const renderDatosPersonales = () => {
+    if (cargandoDatos) return <p className="text-center mt-10">Cargando perfil...</p>;
+    if (!datosUsuario) return null;
+
+    if (modoEdicion && datosEditables) {
       return (
-        <p className="text-center text-[var(--color-text)]">
-          Cargando historial de torneos...
-        </p>
+        <div className="max-w-2xl mx-auto bg-[var(--color-bg-secondary)] p-8 rounded-2xl shadow-xl">
+          <h2 className="text-2xl font-bold mb-6 text-center">Editar Perfil</h2>
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div><label className="text-sm text-gray-400">Nombre</label><input value={datosEditables.nombre} onChange={e => setDatosEditables({ ...datosEditables, nombre: e.target.value })} className="w-full p-2 rounded bg-[var(--color-bg)] outline-none focus:ring-2 ring-[var(--color-primary)]" /></div>
+            <div><label className="text-sm text-gray-400">Apellidos</label><input value={datosEditables.apellidos} onChange={e => setDatosEditables({ ...datosEditables, apellidos: e.target.value })} className="w-full p-2 rounded bg-[var(--color-bg)] outline-none focus:ring-2 ring-[var(--color-primary)]" /></div>
+            <div><label className="text-sm text-gray-400">Email</label><input value={datosEditables.email} onChange={e => setDatosEditables({ ...datosEditables, email: e.target.value })} className="w-full p-2 rounded bg-[var(--color-bg)] outline-none focus:ring-2 ring-[var(--color-primary)]" /></div>
+            <div><label className="text-sm text-gray-400">Teléfono</label><input value={datosEditables.telefono || ""} onChange={e => setDatosEditables({ ...datosEditables, telefono: e.target.value })} className="w-full p-2 rounded bg-[var(--color-bg)] outline-none focus:ring-2 ring-[var(--color-primary)]" /></div>
+            <div className="md:col-span-2"><label className="text-sm text-gray-400">Localidad</label><input value={datosEditables.localidad || ""} onChange={e => setDatosEditables({ ...datosEditables, localidad: e.target.value })} className="w-full p-2 rounded bg-[var(--color-bg)] outline-none focus:ring-2 ring-[var(--color-primary)]" /></div>
+          </div>
+          {errorEdicion && <p className="text-red-500 text-center mb-4">{errorEdicion}</p>}
+          <div className="flex justify-center gap-4 mt-6">
+            <button onClick={() => setModoEdicion(false)} className="px-4 py-2 bg-gray-600 rounded-lg text-white">Cancelar</button>
+            <button onClick={() => setMostrarConfirmacionEdicion(true)} className="px-4 py-2 bg-[var(--color-primary)] rounded-lg text-white font-bold">Guardar</button>
+          </div>
+        </div>
       );
     }
-
-    if (errorHistorial) {
-      return (
-        <p className="text-center text-red-600 font-semibold">
-          {errorHistorial}
-        </p>
-      );
-    }
-
-    if (historialTorneos.length === 0) {
-      return (
-        <p className="text-center text-[var(--color-text)]">
-          No has participado en torneos finalizados.
-        </p>
-      );
-    }
-
     return (
-      <div className="space-y-4">
-        {historialTorneos.map((torneo, index) => (
-          <div
-            key={index}
-            className="bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-6 flex flex-col md:flex-row md:justify-between md:items-center"
-          >
+      <div className="max-w-3xl mx-auto bg-[var(--color-bg-secondary)] shadow-lg rounded-2xl p-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Datos Personales</h2>
+          <button onClick={iniciarEdicion} className="text-[var(--color-primary)] hover:underline">Editar</button>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6 text-[var(--color-text)]">
+          <div><p className="text-sm text-gray-500">Nombre</p><p className="font-semibold text-lg">{datosUsuario.nombre}</p></div>
+          <div><p className="text-sm text-gray-500">Apellidos</p><p className="font-semibold text-lg">{datosUsuario.apellidos}</p></div>
+          <div><p className="text-sm text-gray-500">Email</p><p className="font-semibold">{datosUsuario.email}</p></div>
+          <div><p className="text-sm text-gray-500">Teléfono</p><p className="font-semibold">{datosUsuario.telefono || "—"}</p></div>
+          <div><p className="text-sm text-gray-500">Localidad</p><p className="font-semibold">{datosUsuario.localidad || "—"}</p></div>
+          <div><p className="text-sm text-gray-500">Miembro desde</p><p className="font-semibold">{new Date(datosUsuario.fechaRegistro).toLocaleDateString()}</p></div>
+        </div>
+        <div className="mt-8 border-t border-gray-700 pt-6">
+          <button onClick={() => setMostrarCambioPassword(true)} className="text-sm bg-gray-700 px-4 py-2 rounded text-white">Cambiar contraseña</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderHistorial = () => {
+    if (cargandoHistorial) return <p className="text-center mt-10">Cargando...</p>;
+    if (historialTorneos.length === 0) return <p className="text-center mt-10 opacity-70">No tienes torneos finalizados.</p>;
+    return (
+      <div className="space-y-4 max-w-4xl mx-auto">
+        {historialTorneos.map((torneo, i) => (
+          <div key={i} className="bg-[var(--color-bg-secondary)] p-6 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-md">
             <div>
-              <h2 className="text-xl font-semibold text-[var(--color-text)]">
-                {torneo.nombreTorneo}
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                {new Date(torneo.fechaHoraInicio).toLocaleDateString()} ·{" "}
-                {torneo.lugarCelebracion}
-              </p>
-
-              <p className="mt-2 text-sm text-[var(--color-text)]">
-                <strong>Juego:</strong> {torneo.juego} ·{" "}
-                <strong>Formato:</strong> {torneo.formatoJuego} ·{" "}
-                <strong>Torneo:</strong> {torneo.formatoTorneo}
-              </p>
+              <h3 className="text-xl font-bold text-[var(--color-primary)]">{torneo.nombreTorneo}</h3>
+              <p className="text-sm text-gray-400">{new Date(torneo.fechaHoraInicio).toLocaleDateString()} - {torneo.lugarCelebracion}</p>
+              <p className="mt-1 text-sm">🎮 {torneo.juego}</p>
             </div>
-
-            <div className="mt-4 md:mt-0 text-sm text-[var(--color-text)] space-y-1 text-right">
-              <p>
-                <strong>Posición:</strong>{" "}
-                {torneo.posicionFinal ?? "—"}
-              </p>
-              <p>
-                <strong>Puntos:</strong>{" "}
-                {torneo.puntos ?? 0}
-              </p>
+            <div className="text-right bg-[var(--color-bg)] p-3 rounded-lg min-w-[120px]">
+              <p className="text-xs text-gray-500 uppercase">Posición</p>
+              <p className="text-2xl font-bold">{torneo.posicionFinal ?? "-"}</p>
+              <p className="text-xs text-gray-500 mt-1">Puntos: {torneo.puntos ?? 0}</p>
             </div>
           </div>
         ))}
@@ -699,93 +308,91 @@ export default function Perfil() {
     );
   };
 
-
-  if (error)
-    return <div className="text-center mt-10 text-red-600 font-semibold font-play">{error}</div>;
-
-  if (cargando)
-    return <div className="text-center mt-10 text-[var(--color-text)] font-play">Cargando torneos...</div>;
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <h2 className="text-2xl font-bold mb-4">Necesitas iniciar sesión para ver tu perfil</h2>
+        <button onClick={() => navigate("/login", { state: { from: location.pathname } })} className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg">Iniciar sesión</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
-      <div className="pt-16 px-8">
+      <div className="pt-16 px-4 md:px-8 flex gap-8 relative">
 
-        <div className="flex gap-8">
+        {menuAbierto && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+            onClick={() => setMenuAbierto(false)}
+          ></div>
+        )}
 
-          <SidebarPerfil
-            activeTab={activeTab}
-            setActiveTab={(tab) => {
-              setActiveTab(tab);
-              cambiarPagina(1);
-              setMostrarFiltros(false);
-              setFiltrosPerfil({
-                nombre: "",
-                fecha_inicio: "",
-                fecha_fin: "",
-                juego: ""
-              });
-            }}
-            onToggleFiltros={() => setMostrarFiltros((v) => !v)}
-            mostrarFiltros={mostrarFiltros}
-            filtros={filtrosPerfil}
-            setFiltros={setFiltrosPerfil}
-            juegos={juegos}
-            onCloseFiltros={() => setMostrarFiltros(false)}
-          />
+        {/*Sidebar*/}
+        <SidebarPerfil
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setPaginaActual(1);
+            setFiltrosPerfil({ nombre: "", fecha_inicio: "", fecha_fin: "", juego: "" });
+          }}
+          filtros={filtrosPerfil}
+          setFiltros={setFiltrosPerfil}
+          juegos={juegos}
+          mostrarFiltros={mostrarFiltros}
+          onToggleFiltros={() => setMostrarFiltros(!mostrarFiltros)}
+          abierto={menuAbierto}
+          setAbierto={setMenuAbierto}
+        />
 
+        <main className="flex-1 min-w-0 transition-all duration-300">
+          <button
+            onClick={() => setMenuAbierto(true)}
+            className={`mb-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md ${menuAbierto ? 'md:hidden' : 'flex'}`}
+          >
+            <span>☰</span> Opciones
+          </button>
 
-          <main className="flex-1">
-            <div className="mb-10 text-center">
-              <h1 className="text-4xl font-bold">
-                Perfil de {user.nombre}
-              </h1>
+          <header className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Perfil de {user.usuario}</h1>
+          </header>
+
+          {mensajeExito && <div className="bg-green-500/20 text-green-400 p-3 rounded-lg mb-6 text-center">{mensajeExito}</div>}
+
+          {activeTab === "datos" && renderDatosPersonales()}
+          {activeTab === "historial" && renderHistorial()}
+          {activeTab === "participar" && renderTorneos(filtrarTorneos(torneosParticipas))}
+          {activeTab === "organizar" && renderTorneos(filtrarTorneos(torneosOrganizas))}
+        </main>
+
+        {mostrarConfirmacionEdicion && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[var(--color-bg-secondary)] p-6 rounded-xl w-80 text-center">
+              <h3 className="text-xl font-bold mb-4">¿Guardar cambios?</h3>
+              <div className="flex justify-center gap-4">
+                <button onClick={guardarCambios} className="bg-[var(--color-primary)] px-4 py-2 rounded text-white">Sí</button>
+                <button onClick={() => setMostrarConfirmacionEdicion(false)} className="bg-gray-600 px-4 py-2 rounded text-white">No</button>
+              </div>
             </div>
-            {mensajeExito && (
-              <div className="mb-6 text-center text-green-600 font-semibold">
-                {mensajeExito}
+          </div>
+        )}
+
+        {mostrarCambioPassword && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[var(--color-bg-secondary)] p-6 rounded-xl w-96">
+              <h3 className="text-xl font-bold mb-4 text-center">Nueva Contraseña</h3>
+              <input type="password" placeholder="Actual" className="w-full p-2 mb-3 rounded bg-[var(--color-bg)]" onChange={e => setPasswordData({ ...passwordData, passwordActual: e.target.value })} />
+              <input type="password" placeholder="Nueva" className="w-full p-2 mb-3 rounded bg-[var(--color-bg)]" onChange={e => setPasswordData({ ...passwordData, nuevaPassword: e.target.value })} />
+              <input type="password" placeholder="Confirmar" className="w-full p-2 mb-3 rounded bg-[var(--color-bg)]" onChange={e => setPasswordData({ ...passwordData, confirmarPassword: e.target.value })} />
+              {errorPassword && <p className="text-red-500 text-sm text-center mb-3">{errorPassword}</p>}
+              <div className="flex justify-center gap-4">
+                <button onClick={guardarPassword} className="bg-[var(--color-primary)] px-4 py-2 rounded text-white">Cambiar</button>
+                <button onClick={cerrarCambioPassword} className="bg-gray-600 px-4 py-2 rounded text-white">Cancelar</button>
               </div>
-            )}
-            {activeTab === "datos" && renderDatosPersonales()}
-            {activeTab === "historial" && renderHistorialTorneos()}
-            {activeTab === "participar" &&
-              renderTorneos(filtrarTorneos(torneosParticipas))}
-
-            {activeTab === "organizar" &&
-              renderTorneos(filtrarTorneos(torneosOrganizas))}
-            {mostrarConfirmacionEdicion && (
-              <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div className="bg-[var(--color-bg-secondary)] rounded-2xl shadow-lg p-6 w-96">
-                  <h2 className="text-xl font-semibold mb-4 text-center">
-                    Confirmar cambios
-                  </h2>
-
-                  <p className="text-center mb-4">
-                    ¿Estás seguro de que quieres guardar los cambios en tus datos personales?
-                  </p>
-
-                  <div className="flex justify-center space-x-4">
-                    <button
-                      onClick={guardarCambios}
-                      className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg"
-                    >
-                      Confirmar
-                    </button>
-                    <button
-                      onClick={() => setMostrarConfirmacionEdicion(false)}
-                      className="bg-gray-400 text-white px-4 py-2 rounded-lg"
-                    >
-                      Atrás
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </main>
-
-        </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-
 }
