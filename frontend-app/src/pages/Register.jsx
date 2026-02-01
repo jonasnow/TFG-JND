@@ -19,41 +19,72 @@ export default function Register() {
   const [exito, setExito] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [telefonoError, setTelefonoError] = useState("");
   const [procesando, setProcesando] = useState(false); //espera reloj arena
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "telefono") {
+      if (!/^\d*$/.test(value)) return; // Solo permitir dígitos
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
-    if (e.target.name === "email") setEmailError("");
-    if (e.target.name === "password" || e.target.name === "confirmPassword") setPasswordError("");
+
+    if (name === "email") setEmailError("");
+    if (name === "password" || name === "confirmPassword") setPasswordError("");
+    if (name === "telefono") setTelefonoError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    //Validaciones existentes
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setEmailError("Por favor, introduce un correo electrónico válido.");
       return;
     }
+
     if (formData.password !== formData.confirmPassword) {
       setPasswordError("Las contraseñas no coinciden.");
       return;
     }
 
+    if (formData.password.length < 6 || formData.password.length > 70) {
+      setPasswordError("La contraseña debe tener entre 6 y 70 caracteres.");
+      return;
+    }
+
+    if (formData.telefono && formData.telefono.length < 9) {
+      setTelefonoError("El teléfono debe tener al menos 9 dígitos.");
+      return;
+    }
+
     setProcesando(true);
+
+    const payload = {
+      nombre: formData.nombre,
+      apellidos: formData.apellidos,
+      localidad: formData.localidad,
+      email: formData.email,
+      password: formData.password,
+      telefono: formData.telefono
+    };
 
     try {
       const response = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
+
       const result = await response.json();
 
       await new Promise(res => setTimeout(res, 1200));
@@ -77,7 +108,6 @@ export default function Register() {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
       <Navbar />
@@ -89,13 +119,13 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
-              { label: "Nombre", name: "nombre", type: "text", required: true },
-              { label: "Apellidos", name: "apellidos", type: "text", required: true },
-              { label: "Localidad", name: "localidad", type: "text" },
-              { label: "Email", name: "email", type: "email", required: true, error: emailError },
-              { label: "Contraseña", name: "password", type: "password", required: true },
-              { label: "Confirmar contraseña", name: "confirmPassword", type: "password", required: true, error: passwordError },
-              { label: "Teléfono", name: "telefono", type: "text" },
+              { label: "Nombre", name: "nombre", type: "text", required: true, maxLength: 100 },
+              { label: "Apellidos", name: "apellidos", type: "text", required: true, maxLength: 150 },
+              { label: "Localidad", name: "localidad", type: "text", maxLength: 100 },
+              { label: "Email", name: "email", type: "email", required: true, error: emailError, maxLength: 150 },
+              { label: "Contraseña", name: "password", type: "password", required: true, maxLength: 70 },
+              { label: "Confirmar contraseña", name: "confirmPassword", type: "password", required: true, error: passwordError, maxLength: 70 },
+              { label: "Teléfono", name: "telefono", type: "text", required: true, maxLength: 20, error: telefonoError },
             ].map((field) => (
               <div key={field.name}>
                 <label className="block mb-1 opacity-80">{field.label}</label>
@@ -105,6 +135,8 @@ export default function Register() {
                   value={formData[field.name]}
                   onChange={handleChange}
                   required={field.required}
+                  maxLength={field.maxLength}
+                  inputMode={field.name === "telefono" ? "numeric" : undefined}
                   className={`w-full border rounded-lg p-2
                     bg-[var(--color-bg)] text-[var(--color-text)]
                     border-gray-300 dark:border-gray-700
@@ -112,6 +144,11 @@ export default function Register() {
                     ${field.error ? "border-red-500" : ""}
                   `}
                 />
+                {field.maxLength && formData[field.name]?.length > field.maxLength * 0.8 && ( // Mostrar contador si se acerca al límite
+                  <span className="text-xs text-gray-400 text-right block">
+                    {formData[field.name].length} / {field.maxLength}
+                  </span>
+                )}
                 {field.error && <p className="text-red-500 text-sm mt-1">{field.error}</p>}
               </div>
             ))}

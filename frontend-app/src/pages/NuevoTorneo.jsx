@@ -51,6 +51,12 @@ export default function RegisterTorneo() {
     return msg;
   };
 
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
+
   useEffect(() => {
     const inicializar = async () => {
       if (authLoading) return;
@@ -112,6 +118,15 @@ export default function RegisterTorneo() {
     e.preventDefault();
     if (isLoading) return;
 
+    if (formData.fechaHoraInicio) {
+        const fechaLocal = new Date(formData.fechaHoraInicio);
+        if (fechaLocal < new Date()) {
+             setErroresCampos({ fechaHoraInicio: "La fecha no puede estar en el pasado." });
+             setResultado("Por favor, corrige la fecha de inicio.");
+             return; // Para si es fecha pasada
+        }
+    }
+
     setIsLoading(true);
     setResultado("");
     setErroresCampos({});
@@ -128,7 +143,8 @@ export default function RegisterTorneo() {
       idFormatoTorneo: parseInt(formData.idFormatoTorneo),
       idFormatoJuego: parseInt(formData.idFormatoJuego),
       descripcion: formData.descripcion || null,
-      premios: formData.premios || null
+      premios: formData.premios || null,
+      fechaHoraInicio: new Date(formData.fechaHoraInicio).toISOString()
     };
 
     try {
@@ -210,7 +226,7 @@ export default function RegisterTorneo() {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block mb-1 text-sm font-semibold">Nombre del Torneo <span className="text-red-500">*</span></label>
-              <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.nombre ? 'border-red-500' : 'border-transparent'} focus:border-[var(--color-primary)] outline-none`} />
+              <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} maxLength={100} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.nombre ? 'border-red-500' : 'border-transparent'} focus:border-[var(--color-primary)] outline-none`} />
               {erroresCampos.nombre && <p className="text-red-500 text-xs mt-1">{erroresCampos.nombre}</p>}
             </div>
 
@@ -263,42 +279,48 @@ export default function RegisterTorneo() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-semibold">Fecha y Hora <span className="text-red-500">*</span></label>
-              <input type="datetime-local" name="fechaHoraInicio" value={formData.fechaHoraInicio} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.fechaHoraInicio ? 'border-red-500' : 'border-transparent'}`} />
+              <input type="datetime-local" name="fechaHoraInicio" value={formData.fechaHoraInicio} min={getMinDateTime()} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.fechaHoraInicio ? 'border-red-500' : 'border-transparent'}`} />
               {erroresCampos.fechaHoraInicio && <p className="text-red-500 text-xs mt-1">{erroresCampos.fechaHoraInicio}</p>}
             </div>
             <div>
               <label className="block mb-1 text-sm font-semibold">Lugar <span className="text-red-500">*</span></label>
-              <input type="text" name="lugarCelebracion" value={formData.lugarCelebracion} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.lugarCelebracion ? 'border-red-500' : 'border-transparent'}`} />
+              <input type="text" name="lugarCelebracion" value={formData.lugarCelebracion} onChange={handleChange} maxLength={150} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.lugarCelebracion ? 'border-red-500' : 'border-transparent'}`} />
               {erroresCampos.lugarCelebracion && <p className="text-red-500 text-xs mt-1">{erroresCampos.lugarCelebracion}</p>}
             </div>
             <div>
               <label className="block mb-1 text-sm font-semibold">Precio (€)</label>
-              <input type="number" name="precioInscripcion" value={formData.precioInscripcion} onChange={handleChange} placeholder="0" className="w-full p-2 rounded bg-[var(--color-bg)]" />
-            </div>
+              <input type="number" inputMode="decimal" name="precioInscripcion" value={formData.precioInscripcion} onChange={handleChange} placeholder="0" className="w-full p-2 rounded bg-[var(--color-bg)]" />            </div>
             <div>
               <label className="block mb-1 text-sm font-semibold">Plazas Máximas</label>
-              <input type="number" name="plazasMax" value={formData.plazasMax} onChange={handleChange} placeholder="Auto" className="w-full p-2 rounded bg-[var(--color-bg)]" />
+              <input type="number" inputMode="numeric" name="plazasMax" value={formData.plazasMax} onChange={handleChange} placeholder="Auto" className="w-full p-2 rounded bg-[var(--color-bg)]" />
             </div>
             <div>
               <label className="block mb-1 text-sm font-semibold">Nº Rondas <span className="text-red-500">*</span></label>
-              <input type="number" name="numeroRondas" value={formData.numeroRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.numeroRondas ? 'border-red-500' : 'border-transparent'}`} />
+              <input type="number" inputMode="numeric" name="numeroRondas" value={formData.numeroRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.numeroRondas ? 'border-red-500' : 'border-transparent'}`} />
               {erroresCampos.numeroRondas && <p className="text-red-500 text-xs mt-1">{erroresCampos.numeroRondas}</p>}
             </div>
             <div>
               <label className="block mb-1 text-sm font-semibold">Duración Ronda (min) <span className="text-red-500">*</span></label>
-              <input type="number" name="duracionRondas" value={formData.duracionRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.duracionRondas ? 'border-red-500' : 'border-transparent'}`} />
+              <input type="number" inputMode="numeric" name="duracionRondas" value={formData.duracionRondas} onChange={handleChange} className={`w-full p-2 rounded bg-[var(--color-bg)] border ${erroresCampos.duracionRondas ? 'border-red-500' : 'border-transparent'}`} />
               {erroresCampos.duracionRondas && <p className="text-red-500 text-xs mt-1">{erroresCampos.duracionRondas}</p>}
             </div>
           </div>
 
           <div>
             <label className="block mb-1 text-sm font-semibold">Descripción</label>
-            <textarea name="descripcion" value={formData.descripcion} onChange={handleChange} rows="3" className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+            <textarea name="descripcion" value={formData.descripcion} onChange={handleChange} rows="3" maxLength={2000} className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+            <p className={`text-xs text-right mt-1 ${formData.descripcion.length > 1800 ? "text-orange-400" : "text-gray-500"}`}>
+              {formData.descripcion.length} / 2000
+            </p>
+
           </div>
 
           <div>
             <label className="block mb-1 text-sm font-semibold">Premios</label>
-            <textarea name="premios" value={formData.premios} onChange={handleChange} rows="2" className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+            <textarea name="premios" value={formData.premios} onChange={handleChange} rows="2" maxLength={2000} className="w-full p-2 rounded bg-[var(--color-bg)]"></textarea>
+            <p className={`text-xs text-right mt-1 ${formData.premios.length > 1800 ? "text-orange-400" : "text-gray-500"}`}>
+              {formData.premios.length} / 2000
+            </p>
           </div>
 
           <button

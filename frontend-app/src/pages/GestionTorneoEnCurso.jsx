@@ -47,8 +47,13 @@ export default function GestionTorneoEnCurso() {
   const cargarDatos = async () => {
     try {
       setCargando(true);
-      //Cargar Ronda
+
       const resRonda = await fetch(`${API_URL}/rondas/${idTorneo}/ronda-actual`, { credentials: "include" });
+
+      if (resRonda.status === 404) {
+        setError("Este torneo está marcado como EN CURSO pero no tiene rondas generadas. Posiblemente no hubo suficientes inscritos.");
+        return;
+      }
       const dataRonda = await resRonda.json();
 
       if (!resRonda.ok) throw new Error(dataRonda.error || "Error");
@@ -101,7 +106,7 @@ export default function GestionTorneoEnCurso() {
           idEnfrentamiento: mesa.idEnfrentamiento,
           resultados: mesa.jugadores.map(j => ({
             idEquipo: j.idEquipo,
-        puntos: parseInt(resultados[mesa.idEnfrentamiento]?.[j.idEquipo] ?? 0), //Por defecto manda 0
+            puntos: parseInt(resultados[mesa.idEnfrentamiento]?.[j.idEquipo] ?? 0), //Por defecto manda 0
           })),
         };
         await fetch(`${API_URL}/rondas/enfrentamiento/guardar-resultado`, {
@@ -295,7 +300,9 @@ export default function GestionTorneoEnCurso() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><span className="text-gray-400 block">Juego</span> {torneo.nombreJuego}</div>
                 <div><span className="text-gray-400 block">Formato</span> {torneo.formato}</div>
-                <div><span className="text-gray-400 block">Fecha</span> {new Date(torneo.fechaHoraInicio).toLocaleDateString()}</div>
+                <div><span className="text-gray-400 block">Fecha</span>
+                  {new Date(torneo.fechaHoraInicio.endsWith("Z") ? torneo.fechaHoraInicio : torneo.fechaHoraInicio + "Z").toLocaleString()}
+                </div>
                 <div><span className="text-gray-400 block">Lugar</span> {torneo.lugarCelebracion}</div>
               </div>
             </div>

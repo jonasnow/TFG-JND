@@ -15,61 +15,58 @@ router = APIRouter(tags=["Autenticación"])
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def crear_usuario(usuario: UsuarioRegistro):
     conn = None
-    cursor = None
     try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        #Comprobación de email y teléfono únicos
+        conflict = False
+        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s", (usuario.email,))
+        if cursor.fetchone():
+            conflict = True
+
+        if not conflict and usuario.telefono:
+            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s", (usuario.telefono,))
+            if cursor.fetchone():
+                conflict = True
+        
+        #Conflicto = 400.
+        if conflict:
+            raise HTTPException(
+                status_code=400, 
+                detail="No se pudo completar el registro. Por favor, verifique que los datos sean correctos."
+            )
+
+        #Si todo bien, insertar usuario
         password_hash = bcrypt.hashpw(
             usuario.password.encode('utf-8'), 
             bcrypt.gensalt()
         ).decode('utf-8')
 
-        conn = get_connection()
-        cursor = conn.cursor()
-
         cursor.execute("""
             INSERT INTO Usuario (nombre, apellidos, localidad, email, password_hash, telefono)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            usuario.nombre, 
-            usuario.apellidos, 
-            usuario.localidad, 
-            usuario.email, 
-            password_hash, 
-            usuario.telefono
-        ))
+        """, (usuario.nombre, usuario.apellidos, usuario.localidad, usuario.email, password_hash, usuario.telefono))
         
         new_user_id = cursor.lastrowid
 
-        cursor.execute("INSERT INTO Equipo (nombre) VALUES (NULL);") #El nombre del equipo será el del usuario cuando se necesite
+        cursor.execute("INSERT INTO Equipo (nombre) VALUES (NULL);")
         new_team_id = cursor.lastrowid
-
-        cursor.execute("""
-            INSERT INTO Usuario_Equipo (idUsuario, idEquipo) 
-            VALUES (%s, %s)
-        """, (new_user_id, new_team_id))
+        #El nombre del equipo será el del usuario cuando se necesite
+        cursor.execute("INSERT INTO Usuario_Equipo (idUsuario, idEquipo) VALUES (%s, %s)", (new_user_id, new_team_id))
 
         conn.commit()
-        
-        return {"mensaje": f"Usuario {usuario.nombre} registrado correctamente"}
+        return {"mensaje": "Usuario registrado correctamente"}
 
-    except mysql.connector.IntegrityError as e:
-        if conn: conn.rollback() 
-        
-        error_msg = str(e)
-        if "email" in error_msg:
-            raise HTTPException(status_code=409, detail="El email ya está registrado")
-        elif "telefono" in error_msg:
-            raise HTTPException(status_code=409, detail="El teléfono ya está registrado")
-        else:
-            raise HTTPException(status_code=500, detail=f"Error de integridad: {error_msg}")
-
+    except HTTPException as he:
+        raise he
     except Exception as e:
         if conn: conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
+        print(f"Error Register: {e}") 
+        #Error genérico para cualquier fallo de servidor
+        raise HTTPException(status_code=500, detail="Error interno del servidor. Inténtelo más tarde.")
     finally:
-        if cursor: cursor.close()
         if conn and conn.is_connected(): conn.close()
-
 
 #Inicio de sesión
 @router.post("/login")
@@ -180,7 +177,7 @@ def me(response: Response, usuario_actual: dict = Depends(obtener_usuario_actual
 #Cerrar sesión
 @router.post("/logout")
 def logout(response: Response):
-    IS_SECURE = False # CAMBIAR A TRUE EN PRODUCCIÓN
+    IS_SECURE = False #CAMBIAR A TRUE EN PRODUCCIÓN
 
     response.delete_cookie(
         key="access_token", 

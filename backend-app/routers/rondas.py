@@ -126,7 +126,7 @@ def obtener_ronda_actual(id_torneo: int):
         
         cursor.execute("SELECT MAX(numeroRonda) as rondaActual FROM Enfrentamiento WHERE idTorneo = %s", (id_torneo,))
         res = cursor.fetchone()
-        if not res or not res["rondaActual"]: return {"error": "Sin rondas"}
+        if not res or not res["rondaActual"]: raise HTTPException(status_code=404, detail="No se han generado rondas para este torneo")
         ronda = res["rondaActual"]
         
         cursor.execute("""
@@ -136,7 +136,7 @@ def obtener_ronda_actual(id_torneo: int):
         ronda_finalizada = (cursor.fetchone()["pendientes"] == 0)
 
         cursor.execute("""
-            SELECT e.idEnfrentamiento, e.sitioAsignado, eq.idEquipo,
+            SELECT e.idEnfrentamiento, e.sitioAsignado, eq.idEquipo, u.idUsuario,
                 COALESCE(NULLIF(eq.nombre, ''), CONCAT(u.nombre, ' ', u.apellidos)) as nombreJugador,
                 ee.puntosObtenidos
             FROM Enfrentamiento e
@@ -154,10 +154,14 @@ def obtener_ronda_actual(id_torneo: int):
             id_enf = fila["idEnfrentamiento"]
             if id_enf not in mesas_dict:
                 mesas_dict[id_enf] = {"idEnfrentamiento": id_enf, "mesa": fila["sitioAsignado"], "jugadores": []}
-            mesas_dict[id_enf]["jugadores"].append({"idEquipo": fila["idEquipo"], "nombre": fila["nombreJugador"], "puntos": fila["puntosObtenidos"]})
+            mesas_dict[id_enf]["jugadores"].append({"idEquipo": fila["idEquipo"], "nombre": fila["nombreJugador"], "idUsuario": fila["idUsuario"], "puntos": fila["puntosObtenidos"]})
             
         return {"numeroRonda": ronda, "nombre": f"Ronda {ronda}", "rondaFinalizada": ronda_finalizada, "mesas": list(mesas_dict.values())}
-    except Exception as e: return {"error": str(e)}
+    except HTTPException as he:
+        raise he 
+    except Exception as e:
+        print(f"Error interno: {e}") 
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn and conn.is_connected(): conn.close()
 
@@ -193,7 +197,7 @@ def guardar_resultado(datos: ResultadoMesa, current_user: dict = Depends(obtener
         if num_jugadores > 2 and id_formato in [1, 4]:
             ranking_mesa = sorted(datos.resultados, key=lambda x: x.puntos, reverse=True)
             for i, res in enumerate(ranking_mesa):
-                puntos_por_posicion = max(0, 3 - i) # 3, 2, 1, 0...
+                puntos_por_posicion = max(0, 3 - i) #3, 2, 1, 0...
                 #Empates: copiar puntos del anterior
                 if i > 0 and res.puntos == ranking_mesa[i-1].puntos:
                     puntos_finales = puntos_torneo_asignados[ranking_mesa[i-1].idEquipo]
@@ -213,7 +217,7 @@ def guardar_resultado(datos: ResultadoMesa, current_user: dict = Depends(obtener
                 puntos_win, puntos_draw, puntos_loss = 3, 1, 0
             
             for res in datos.resultados:
-                if len(datos.resultados) == 1: puntos_torneo_asignados[res.idEquipo] = 3 # Bye
+                if len(datos.resultados) == 1: puntos_torneo_asignados[res.idEquipo] = 3 #Bye
                 elif res.idEquipo in ganadores_ids:
                     puntos_torneo_asignados[res.idEquipo] = puntos_draw if es_empate else puntos_win
                 else:
@@ -257,11 +261,10 @@ def cerrar_ronda(datos: AccionRonda, current_user: dict = Depends(obtener_usuari
 
         cursor = conn.cursor(dictionary=True)
         
-        # Seguridad
+        #Seguridad
         verificar_permiso_organizador(cursor, datos.idTorneo, current_user["idUsuario"])
         
-        
-        # 1. Calcular puntos totales
+        #1. Calcular puntos totales actuales
         cursor.execute("""
             SELECT idEquipo, SUM(puntosObtenidos) as total FROM Equipo_Enfrentamiento ee
             JOIN Enfrentamiento e ON ee.idEnfrentamiento = e.idEnfrentamiento
@@ -269,13 +272,13 @@ def cerrar_ronda(datos: AccionRonda, current_user: dict = Depends(obtener_usuari
         """, (datos.idTorneo,))
         puntos_equipos = cursor.fetchall()
         
-        # 2. Resetear y actualizar
+        #2. Actualizar puntos acumulados en Equipo_Torneo
         cursor.execute("UPDATE Equipo_Torneo SET puntosAcumulados = 0 WHERE idTorneo = %s", (datos.idTorneo,))
         for fila in puntos_equipos:
             total = fila["total"] if fila["total"] is not None else 0
             cursor.execute("UPDATE Equipo_Torneo SET puntosAcumulados = %s WHERE idTorneo = %s AND idEquipo = %s", (total, datos.idTorneo, fila["idEquipo"]))
         
-        # 3. Verificar fin
+        #3. Verificar fin del torneo
         cursor.execute("SELECT numeroRondas FROM Torneo WHERE idTorneo=%s", (datos.idTorneo,))
         max_rondas = cursor.fetchone()["numeroRondas"]
         
@@ -284,8 +287,25 @@ def cerrar_ronda(datos: AccionRonda, current_user: dict = Depends(obtener_usuari
         
         finalizado = False
         if ronda_actual >= max_rondas:
+            #A) Marcar como finalizado
             cursor.execute("UPDATE Torneo SET estado='FINALIZADO' WHERE idTorneo=%s", (datos.idTorneo,))
             finalizado = True
+            
+            #B)Calcular posiciones finales
+            cursor.execute("""
+                SELECT idEquipo FROM Equipo_Torneo 
+                WHERE idTorneo = %s 
+                ORDER BY puntosAcumulados DESC
+            """, (datos.idTorneo,))
+            
+            ranking_final = cursor.fetchall()
+            
+            #Iteramos y guardamos la posición (1º, 2º, 3º...)
+            for i, equipo in enumerate(ranking_final, 1):
+                cursor.execute("""
+                    UPDATE Equipo_Torneo SET posicion = %s 
+                    WHERE idEquipo = %s AND idTorneo = %s
+                """, (i, equipo["idEquipo"], datos.idTorneo))
             
         conn.commit()
         return {"ok": True, "finalizado": finalizado}
@@ -405,10 +425,11 @@ def obtener_ronda_especifica(id_torneo: int, numero_ronda: int):
             raise HTTPException(status_code=404, detail="Ronda no encontrada")
 
         cursor.execute("""
-            SELECT e.idEnfrentamiento, e.sitioAsignado, eq.idEquipo,
+            SELECT e.idEnfrentamiento, e.sitioAsignado, eq.idEquipo, 
+                u.idUsuario,
                 COALESCE(NULLIF(eq.nombre, ''), CONCAT(u.nombre, ' ', u.apellidos)) as nombreJugador,
                 ee.puntosObtenidos,
-                e.marcador -- Traemos también el marcador JSON para mostrar resultados "bonitos"
+                e.marcador
             FROM Enfrentamiento e
             JOIN Equipo_Enfrentamiento ee ON e.idEnfrentamiento = ee.idEnfrentamiento
             JOIN Equipo eq ON ee.idEquipo = eq.idEquipo
@@ -429,9 +450,11 @@ def obtener_ronda_especifica(id_torneo: int, numero_ronda: int):
                     "marcador": json.loads(fila["marcador"]) if fila["marcador"] else None,
                     "jugadores": []
                 }
+            
             mesas_dict[id_enf]["jugadores"].append({
                 "idEquipo": fila["idEquipo"], 
-                "nombre": fila["nombreJugador"], 
+                "nombre": fila["nombreJugador"],
+                "idUsuario": fila["idUsuario"],
                 "puntos": fila["puntosObtenidos"]
             })
             

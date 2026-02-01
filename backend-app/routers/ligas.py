@@ -12,7 +12,7 @@ def listar_ligas_vigentes():
         cursor.execute("""
             SELECT idLiga, nombre
             FROM Liga
-            WHERE fechaFin > NOW()
+            WHERE fechaFin > UTC_TIMESTAMP()
             ORDER BY nombre ASC;
         """)
         return cursor.fetchall()
@@ -34,7 +34,7 @@ def listar_ligas_disponibles():
                 L.idLiga, L.nombre, L.numeroTorneos, COUNT(T.idTorneo) AS torneos_asociados
             FROM Liga L
             LEFT JOIN Torneo T ON L.idLiga = T.idLiga
-            WHERE L.fechaFin > NOW()
+            WHERE L.fechaFin > UTC_TIMESTAMP()
             GROUP BY L.idLiga, L.nombre, L.numeroTorneos
             HAVING COUNT(T.idTorneo) < L.numeroTorneos 
             ORDER BY L.nombre ASC; 

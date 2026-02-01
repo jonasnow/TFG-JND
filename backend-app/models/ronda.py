@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 from typing import List, Optional, Any
 
-# Clases salida
+#Clases salida
 class JugadorRonda(BaseModel):
     idEquipo: int
+    idUsuario: int
     nombre: str
     puntos: Optional[int] = None
 

@@ -90,7 +90,7 @@ def listar_torneos_filtrados(filtros: FiltroTorneos):
             LEFT JOIN Juego j ON t.idJuego = j.idJuego
             LEFT JOIN FormatoTorneo ft ON t.idFormatoTorneo = ft.idFormatoTorneo
             LEFT JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego
-            WHERE t.fechaHoraInicio > NOW()
+            WHERE t.fechaHoraInicio > UTC_TIMESTAMP()
         """
 
         params = []
@@ -196,8 +196,17 @@ def inscribir_usuario(datos: UsuarioInscripcion, usuario_actual: dict = Depends(
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
+        #Comprobar que el torneo está en estado PLANIFICADO
+        cursor.execute("SELECT estado FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        info_torneo = cursor.fetchone()
         
-        #3. Buscamos el equipo individual del usuario
+        if not info_torneo:
+            raise HTTPException(status_code=404, detail="Torneo no encontrado")
+            
+        if info_torneo["estado"] != "PLANIFICADO":
+            raise HTTPException(status_code=400, detail="El torneo ya no admite inscripciones (ya comenzó o finalizó).")
+        
+        #Buscar el equipo individual del usuario
         cursor.execute("""
             SELECT idEquipo 
             FROM Usuario_Equipo 
@@ -210,7 +219,7 @@ def inscribir_usuario(datos: UsuarioInscripcion, usuario_actual: dict = Depends(
         if not equipo: #Fallo de jugador sin equipo, por si acaso
             raise HTTPException(status_code=400, detail="No se encontró un perfil de jugador asociado a este usuario.")
 
-        #4. Intentamos la inscripción
+        #Inscripción
         cursor.execute("""
             INSERT INTO Equipo_Torneo (idEquipo, idTorneo, confirmacionInscripcion, confirmacionAsistencia) 
             VALUES (%s, %s, 'PENDIENTE', 'PENDIENTE');

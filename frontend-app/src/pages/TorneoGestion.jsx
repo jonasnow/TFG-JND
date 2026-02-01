@@ -185,7 +185,7 @@ export default function TorneoGestion() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-sm bg-[var(--color-bg)] p-4 rounded-xl">
             <div><p className="text-gray-500">Lugar</p><p className="font-semibold">{torneo.lugarCelebracion}</p></div>
-            <div><p className="text-gray-500">Inicio</p><p className="font-semibold">{new Date(torneo.fechaHoraInicio).toLocaleDateString()}</p></div>
+            <div><p className="text-gray-500">Inicio</p><p className="font-semibold">{new Date(torneo.fechaHoraInicio.endsWith("Z") ? torneo.fechaHoraInicio : torneo.fechaHoraInicio + "Z").toLocaleDateString()}</p></div>
             <div><p className="text-gray-500">Juego</p><p className="font-semibold">{torneo.nombreJuego}</p></div>
             <div><p className="text-gray-500">Inscritos</p><p className="font-semibold">{inscritos.length} / {torneo.plazasMax}</p></div>
         </div>

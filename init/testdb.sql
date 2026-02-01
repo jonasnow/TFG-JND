@@ -95,22 +95,34 @@ CREATE TABLE `Equipo_Torneo` (
 --
 
 INSERT INTO `Equipo_Torneo` (`idEquipo`, `idTorneo`, `posicion`, `puntosAcumulados`, `confirmacionAsistencia`, `confirmacionInscripcion`, `fechaInscripcion`) VALUES
-(1, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:00:00'),
-(2, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:01:00'),
-(3, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:02:00'),
-(4, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:03:00'),
-(5, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:04:00'),
-(6, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:05:00'),
-(7, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:06:00'),
-(8, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:07:00'),
-(1, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:08:00'),
-(2, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:09:00'),
-(3, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:10:00'),
-(4, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:11:00'),
-(5, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:12:00'),
-(6, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:13:00'),
-(7, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:14:00'),
-(8, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2025-10-19 00:15:00');
+(1, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:00:00'),
+(2, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:05:00'),
+(3, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:10:00'),
+(4, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:15:00'),
+(5, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:20:00'),
+(6, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:25:00'),
+(7, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:30:00'),
+(8, 1, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 10:35:00'),
+(1, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:00:00'),
+(2, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:05:00'),
+(3, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:10:00'),
+(4, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:15:00'),
+(5, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:20:00'),
+(6, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:25:00'),
+(7, 2, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 11:30:00'),
+(1, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:00:00'),
+(2, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:05:00'),
+(3, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:10:00'),
+(4, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:15:00'),
+(5, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:20:00'),
+(6, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:25:00'),
+(7, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:30:00'),
+(8, 3, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 12:35:00'),
+(1, 17, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 13:00:00'),
+(2, 17, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 13:05:00'),
+(3, 17, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 13:10:00'),
+(4, 17, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 13:15:00'),
+(5, 17, NULL, 0, 'CONFIRMADA', 'CONFIRMADA', '2026-01-29 13:20:00');
 -- --------------------------------------------------------
 
 --
@@ -282,26 +294,26 @@ CREATE TABLE `Torneo` (
 
 INSERT INTO `Torneo` 
 (`idTorneo`, `idOrganizador`, `idLiga`, `nombre`, `descripcion`, `precioInscripcion`, `numeroRondas`, `duracionRondas`, `fechaHoraInicio`, `lugarCelebracion`, `plazasMax`, `estado`, `premios`, `idFormatoTorneo`, `idJuego`, `idFormatoJuego`, `fechaCreacion`) VALUES
-(1, 1, NULL, 'Torneo Eterno', 'Torneo sobre el que hacer pruebas', 1.0, 4, 50, '2027-01-01 08:00:00', 'Lugar celebración', 32, 'PLANIFICADO', 'Premio', 1, 1, 4, '2025-10-19 00:00:00'),
-(2, 2, NULL, 'Yu-Gi-Oh! Old School Duel', 'Torneo formato Goat', 10.0, 4, 40, '2025-10-12 17:00:00', 'Sala de Juegos B', 24, 'FINALIZADO', 'Cartas promocionales', 1, 3, 8, '2025-10-19 00:01:00'),
-(3, 3, NULL, 'Magic Winter Draft', 'Torneo formato Draft', 15.0, 3, 45, '2025-12-10 18:00:00', 'Club Recreativo C', 16, 'PLANIFICADO', 'Sobres Draft', 1, 1, 1, '2025-10-19 00:02:00'),
-(4, 4, NULL, 'Magic Pioneer Showdown', 'Competitivo formato Pioneer', 20.0, 5, 55, '2026-01-20 10:00:00', 'Sala D', 32, 'PLANIFICADO', 'Trofeo + sobres', 1, 1, 5, '2025-10-19 00:03:00'),
-(5, 5, NULL, 'Pokémon League Challenge', 'Torneo estándar', 10.0, 4, 40, '2026-02-14 10:00:00', 'Centro E', 32, 'PLANIFICADO', 'Cartas de Liga', 1, 2, 14, '2025-10-19 00:04:00'),
-(6, 6, NULL, 'Pokémon Winter Cup', 'Torneo formato Expanded', 12.0, 5, 50, '2026-03-10 10:00:00', 'Sala F', 24, 'PLANIFICADO', 'Medallas', 1, 2, 15, '2025-10-19 00:05:00'),
-(7, 7, NULL, 'Yu-Gi-Oh! Edison Clash', 'Torneo Edison', 10.0, 4, 40, '2026-01-12 16:00:00', 'Club G', 32, 'PLANIFICADO', 'Cartas exclusivas', 1, 3, 9, '2025-10-19 00:06:00'),
-(8, 8, NULL, 'Yu-Gi-Oh! Genesis Cup', 'Formato Genesys', 15.0, 5, 55, '2026-02-05 10:00:00', 'Sala H', 24, 'PLANIFICADO', 'Tapete exclusivo', 1, 3, 13, '2025-10-19 00:07:00'),
-(9, 1, NULL, 'FAB Classic Constructed Cup', 'Torneo competitivo', 20.0, 6, 55, '2026-01-18 10:00:00', 'Centro I', 32, 'PLANIFICADO', 'Premios en metálico', 1, 4, 18, '2025-10-19 00:08:00'),
-(10, 2, NULL, 'FAB Blitz Brawl', 'Torneo Blitz', 12.0, 4, 40, '2026-02-08 11:00:00', 'Sala J', 16, 'PLANIFICADO', 'Cartas especiales', 1, 4, 19, '2025-10-19 00:09:00'),
-(11, 3, NULL, 'One Piece Standard Clash', 'Competitivo estándar', 10.0, 5, 50, '2026-01-30 10:00:00', 'Club K', 32, 'PLANIFICADO', 'Sobres OP', 1, 5, 22, '2025-10-19 00:10:00'),
-(12, 4, NULL, 'One Piece Sealed Event', 'Sellado con 6 boosters', 18.0, 4, 40, '2026-03-03 16:00:00', 'Sala L', 20, 'PLANIFICADO', 'Cartas promo', 1, 5, 23, '2025-10-19 00:11:00'),
-(13, 5, NULL, 'Lorcana Core Constructed Challenge', 'Torneo competitivo', 10.0, 4, 40, '2026-01-12 10:00:00', 'Centro M', 32, 'PLANIFICADO', 'Premios mágicos', 1, 6, 25, '2025-10-19 00:12:00'),
-(14, 6, NULL, 'Lorcana Infinity Cup', 'Torneo formato Infinity', 15.0, 5, 45, '2026-02-20 10:00:00', 'Sala N', 24, 'PLANIFICADO', 'Cartas raras', 1, 6, 26, '2025-10-19 00:13:00'),
-(15, 7, NULL, 'SWU Premier Assault', 'Torneo Premier', 10.0, 5, 45, '2026-01-05 10:00:00', 'Sala O', 32, 'PLANIFICADO', 'Cartas premium', 1, 7, 28, '2025-10-19 00:14:00'),
-(16, 8, NULL, 'SWU Twin Suns Battle', 'Formato Twin Suns', 12.0, 4, 60, '2026-02-10 17:00:00', 'Sala P', 20, 'PLANIFICADO', 'Tapetes SW', 1, 7, 30, '2025-10-19 00:15:00'),
-(17, 1, NULL, 'Catán Winter Championship', 'Torneo del clásico Catán', 8.0, 3, 60, '2026-01-14 10:00:00', 'Centro Q', 16, 'PLANIFICADO', 'Juego Catán + expansión', 1, 8, 31, '2025-10-19 00:16:00'),
-(18, 2, NULL, 'Jungle Speed Reflex Cup', 'Competición de reflejos', 5.0, 5, 15, '2026-02-12 10:00:00', 'Sala R', 20, 'PLANIFICADO', 'Edición limitada', 1, 9, 32, '2025-10-19 00:17:00'),
-(19, 3, NULL, 'Virus Survival Event', 'Partidas eliminatorias de Virus', 6.0, 4, 20, '2026-01-25 17:00:00', 'Centro S', 24, 'PLANIFICADO', 'Barajas exclusivas', 1, 10, 33, '2025-10-19 00:18:00'),
-(20, 4, NULL, 'Dominion Deckmaster Cup', 'Torneo de construcción de mazos', 7.0, 4, 30, '2026-03-01 10:00:00', 'Sala T', 16, 'PLANIFICADO', 'Expansiones Dominion', 1, 11, 34, '2025-10-19 00:19:00');
+(1, 1, NULL, 'Torneo Eterno', 'Torneo de pruebas generales', 1.0, 4, 50, '2027-01-01 08:00:00', 'Lugar celebración', 32, 'PLANIFICADO', 'Premio', 1, 1, 4, '2026-01-27 09:00:00'),
+(2, 1, NULL, 'Yu-Gi-Oh! Old School Duel', 'Torneo formato Goat (Eliminación)', 10.0, 4, 40, '2026-02-16 17:00:00', 'Sala de Juegos B', 24, 'PLANIFICADO', 'Cartas promocionales', 2, 3, 8, '2026-01-27 09:15:00'),
+(3, 3, NULL, 'Magic Winter Draft', 'Torneo formato Draft (Round Robin)', 15.0, 12, 45, '2026-02-17 18:00:00', 'Club Recreativo C', 16, 'PLANIFICADO', 'Sobres Draft', 3, 1, 1, '2026-01-27 09:30:00'),
+(4, 4, NULL, 'Magic Pioneer Showdown', 'Competitivo formato Pioneer', 20.0, 5, 55, '2026-02-18 10:00:00', 'Sala D', 32, 'PLANIFICADO', 'Trofeo + sobres', 1, 1, 5, '2026-01-27 10:00:00'),
+(5, 5, NULL, 'Pokémon League Challenge', 'Torneo estándar', 10.0, 4, 40, '2026-02-20 10:00:00', 'Centro E', 32, 'PLANIFICADO', 'Cartas de Liga', 1, 2, 14, '2026-01-27 10:30:00'),
+(6, 6, NULL, 'Pokémon Winter Cup', 'Torneo formato Expanded', 12.0, 5, 50, '2026-02-21 10:00:00', 'Sala F', 24, 'PLANIFICADO', 'Medallas', 1, 2, 15, '2026-01-27 11:00:00'),
+(7, 7, NULL, 'Yu-Gi-Oh! Edison Clash', 'Torneo Edison', 10.0, 4, 40, '2026-02-22 16:00:00', 'Club G', 32, 'PLANIFICADO', 'Cartas exclusivas', 1, 3, 9, '2026-01-27 11:30:00'),
+(8, 8, NULL, 'Yu-Gi-Oh! Genesis Cup', 'Formato Genesys', 15.0, 5, 55, '2026-02-23 10:00:00', 'Sala H', 24, 'PLANIFICADO', 'Tapete exclusivo', 1, 3, 13, '2026-01-27 12:00:00'),
+(9, 1, NULL, 'FAB Classic Constructed Cup', 'Torneo competitivo', 20.0, 6, 55, '2026-02-24 10:00:00', 'Centro I', 32, 'PLANIFICADO', 'Premios en metálico', 1, 4, 18, '2026-01-28 09:00:00'),
+(10, 2, NULL, 'FAB Blitz Brawl', 'Torneo Blitz', 12.0, 4, 40, '2026-02-25 11:00:00', 'Sala J', 16, 'PLANIFICADO', 'Cartas especiales', 1, 4, 19, '2026-01-28 09:15:00'),
+(11, 3, NULL, 'One Piece Standard Clash', 'Competitivo estándar', 10.0, 5, 50, '2026-02-26 10:00:00', 'Club K', 32, 'PLANIFICADO', 'Sobres OP', 1, 5, 22, '2026-01-28 09:30:00'),
+(12, 4, NULL, 'One Piece Sealed Event', 'Sellado con 6 boosters', 18.0, 4, 40, '2026-02-27 16:00:00', 'Sala L', 20, 'PLANIFICADO', 'Cartas promo', 1, 5, 23, '2026-01-28 10:00:00'),
+(13, 5, NULL, 'Lorcana Core Constructed Challenge', 'Torneo competitivo', 10.0, 4, 40, '2026-02-28 10:00:00', 'Centro M', 32, 'PLANIFICADO', 'Premios mágicos', 1, 6, 25, '2026-01-28 10:30:00'),
+(14, 6, NULL, 'Lorcana Infinity Cup', 'Torneo formato Infinity', 15.0, 5, 45, '2026-03-01 10:00:00', 'Sala N', 24, 'PLANIFICADO', 'Cartas raras', 1, 6, 26, '2026-01-28 11:00:00'),
+(15, 7, NULL, 'SWU Premier Assault', 'Torneo Premier', 10.0, 5, 45, '2026-03-02 10:00:00', 'Sala O', 32, 'PLANIFICADO', 'Cartas premium', 1, 7, 28, '2026-01-28 11:30:00'),
+(16, 8, NULL, 'SWU Twin Suns Battle', 'Formato Twin Suns', 12.0, 4, 60, '2026-03-03 17:00:00', 'Sala P', 20, 'PLANIFICADO', 'Tapetes SW', 1, 7, 30, '2026-01-28 12:00:00'),
+(17, 1, NULL, 'Catán Winter Championship', 'Torneo del clásico Catán (Suizo)', 8.0, 3, 60, '2026-03-04 10:00:00', 'Centro Q', 16, 'PLANIFICADO', 'Juego Catán + expansión', 4, 8, 31, '2026-01-28 12:30:00'),
+(18, 2, NULL, 'Jungle Speed Reflex Cup', 'Competición de reflejos', 5.0, 5, 15, '2026-03-05 10:00:00', 'Sala R', 20, 'PLANIFICADO', 'Edición limitada', 1, 9, 32, '2026-01-28 13:00:00'),
+(19, 3, NULL, 'Virus Survival Event', 'Partidas eliminatorias de Virus', 6.0, 4, 20, '2026-01-23 17:00:00', 'Centro S', 24, 'CANCELADO', 'Barajas exclusivas', 1, 10, 33, '2026-01-15 10:00:00'),
+(20, 4, NULL, 'Dominion Deckmaster Cup', 'Torneo de construcción de mazos', 7.0, 4, 30, '2026-01-24 10:00:00', 'Sala T', 16, 'CANCELADO', 'Expansiones Dominion', 1, 11, 34, '2026-01-15 11:00:00');
 
 -- --------------------------------------------------------
 
@@ -316,7 +328,7 @@ CREATE TABLE `Usuario` (
   `localidad` varchar(100) DEFAULT NULL,
   `email` varchar(150) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
-  `telefono` varchar(20) DEFAULT NULL,
+  `telefono` varchar(20) NOT NULL,
   `fechaRegistro` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -325,7 +337,7 @@ CREATE TABLE `Usuario` (
 --
 
 INSERT INTO `Usuario` (`idUsuario`, `nombre`, `apellidos`, `localidad`, `email`, `password_hash`, `telefono`, `fechaRegistro`) VALUES
-(1, 'Admin', 'Istrador', 'Local', 'admin@example.com', '$2b$12$SwB7Nn0zSvHEeh9bsm7vl.24T2lCoaNb0QXhoVBaPJkzGy1.06cqO', '0', '2025-10-19 00:00:00'),
+(1, 'Admin', 'Istrador', 'Local', 'admin@example.com', '$2b$12$SwB7Nn0zSvHEeh9bsm7vl.24T2lCoaNb0QXhoVBaPJkzGy1.06cqO', '000000000', '2025-10-19 00:00:00'),
 (2, 'Luis', 'Martínez López', 'Madrid', 'luis@example.com', '$2b$12$94r1E98Ds6V9S2HAP9LNGeP/In7yF8VfH9fuW2OF3CncaVk1jqR7m', '600222222', '2025-10-19 00:00:00'),
 (3, 'Carmen', 'Santos Díaz', 'Madrid', 'carmen@example.com', '$2b$12$zuKk88Omgzxf964hdFJmsOdfR6XIVxgv/yUcLU4wtBNie.KAHejU.', '600333333', '2025-10-19 00:00:00'),
 (4, 'Javier', 'Morales Pérez', 'Madrid', 'javier@example.com', '$2b$12$Otwy4MSvfWmGRdIkyQoG5usUrOIgYtKuPt59eyItuNua2HV/.cb3e', '600444444', '2025-10-19 00:00:00'),

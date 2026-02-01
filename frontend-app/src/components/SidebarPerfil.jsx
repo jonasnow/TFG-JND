@@ -32,16 +32,13 @@ export default function SidebarPerfil({
                 bg-[var(--color-bg-secondary)] shadow-xl 
                 transition-all duration-300 ease-in-out overflow-y-auto
                 
-                /* --- ESTILOS MÓVIL (Drawer Flotante) --- */
                 fixed top-16 left-0 h-[calc(100vh-64px)] z-40 border-r border-gray-700
                 w-72 p-5
                 ${abierto ? "translate-x-0" : "-translate-x-full"}
 
-                /* --- ESTILOS ESCRITORIO (Columna Sticky Colapsable) --- */
                 md:translate-x-0 md:static md:h-auto md:min-h-[calc(100vh-64px)] 
                 md:sticky md:top-16 md:border-none md:rounded-2xl
                 
-                /* Si está abierto en desktop: ancho normal y padding */
                 ${abierto ? "md:w-72 md:opacity-100 md:p-5" : "md:w-0 md:opacity-0 md:p-0 md:overflow-hidden"}
             `}
         >

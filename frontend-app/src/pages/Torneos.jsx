@@ -232,7 +232,11 @@ export default function Torneos() {
                       </div>
                       <div className="text-sm space-y-2 flex-1 mb-4 opacity-90">
                         <p>{torneo.lugarCelebracion}</p>
-                        <p>{new Date(torneo.fechaHoraInicio).toLocaleDateString()}</p>
+                        <p>
+                          {new Date(torneo.fechaHoraInicio.endsWith("Z") ? torneo.fechaHoraInicio : torneo.fechaHoraInicio + "Z").toLocaleDateString()}
+                          {" "}
+                          {new Date(torneo.fechaHoraInicio.endsWith("Z") ? torneo.fechaHoraInicio : torneo.fechaHoraInicio + "Z").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
                         <p>{torneo.nombreJuego}</p>
                         <p className="font-semibold text-[var(--color-primary)] mt-1">{torneo.precioInscripcion > 0 ? `${torneo.precioInscripcion}€` : "Gratis"}</p>
                       </div>

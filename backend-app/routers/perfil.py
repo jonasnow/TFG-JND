@@ -133,59 +133,47 @@ def editar_datos_usuario(datos: UsuarioEditar, usuario_actual: dict = Depends(ob
     conn = None
     try:
         idUsuario = usuario_actual["idUsuario"]
-
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        # Validación de duplicados (Email o Teléfono)
-        cursor.execute("""
-            SELECT idUsuario FROM Usuario
-            WHERE (email = %s OR telefono = %s)
-              AND idUsuario != %s
-        """, (
-            datos.email,     # Accedemos con punto, no con ["clave"]
-            datos.telefono,
-            idUsuario
-        ))
+        cursor = conn.cursor()
 
+        #Validar Email duplicado
+        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s AND idUsuario != %s", (datos.email, idUsuario))
         if cursor.fetchone():
-            raise HTTPException(status_code=409, detail="El email o el teléfono ya están en uso por otro usuario")
+            raise HTTPException(status_code=409, detail="Ha habido un problema con el campo: email. Inténtelo de nuevo más tarde.")
 
-        # Actualizar
+        #Validar Teléfono duplicado
+        if datos.telefono:
+            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s AND idUsuario != %s", (datos.telefono, idUsuario))
+            if cursor.fetchone():
+                raise HTTPException(status_code=409, detail="Ha habido un problema con el campo: teléfono. Inténtelo de nuevo más tarde.")
+
+        #Update
         cursor.execute("""
             UPDATE Usuario
-            SET nombre = %s,
-                apellidos = %s,
-                email = %s,
-                localidad = %s,
-                telefono = %s
+            SET nombre = %s, apellidos = %s, email = %s, localidad = %s, telefono = %s
             WHERE idUsuario = %s;
-        """, (
-            datos.nombre,
-            datos.apellidos,
-            datos.email,
-            datos.localidad,
-            datos.telefono,
-            idUsuario
-        ))
+        """, (datos.nombre, datos.apellidos, datos.email, datos.localidad, datos.telefono, idUsuario))
 
         conn.commit()
         return {"message": "Datos actualizados correctamente"}
 
-    except HTTPException:
-        raise
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        return {"error": str(e)}
-
+        if conn: conn.rollback()
+        print(f"Error Editar Perfil: {e}")
+        raise HTTPException(status_code=500, detail="Ha ocurrido un error al guardar los datos.")
     finally:
-        if conn and conn.is_connected():
-            conn.close()
-
+        if conn and conn.is_connected(): conn.close()
+        
 #Cambiar contraseña
 @router.post("/cambiar_password")
 def cambiar_password(datos: PasswordChange, usuario_actual: dict = Depends(obtener_usuario_actual)):
     conn = None
     try:
+        if datos.passwordActual == datos.nuevaPassword:
+            raise HTTPException(status_code=400, detail="La nueva contraseña no puede ser igual a la actual.")
+
         idUsuario = usuario_actual["idUsuario"]
         
         conn = get_connection()
@@ -198,15 +186,15 @@ def cambiar_password(datos: PasswordChange, usuario_actual: dict = Depends(obten
         user = cursor.fetchone()
 
         if not user or not bcrypt.checkpw(
-            datos.passwordActual.encode(),
-            user["password_hash"].encode()
+            datos.passwordActual.encode('utf-8'),
+            user["password_hash"].encode('utf-8')
         ):
             raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
 
         nueva_hash = bcrypt.hashpw(
-            datos.nuevaPassword.encode(),
+            datos.nuevaPassword.encode('utf-8'),
             bcrypt.gensalt()
-        ).decode()
+        ).decode('utf-8')
 
         cursor.execute(
             "UPDATE Usuario SET password_hash = %s WHERE idUsuario = %s",
@@ -216,10 +204,11 @@ def cambiar_password(datos: PasswordChange, usuario_actual: dict = Depends(obten
 
         return {"message": "Contraseña actualizada correctamente"}
 
-    except HTTPException:
-        raise
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        return {"error": str(e)}
+        if conn: conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn and conn.is_connected():
             conn.close()
@@ -246,7 +235,7 @@ def historial_usuario(usuario_actual: dict = Depends(obtener_usuario_actual)):
                 fj.nombre AS formatoJuego,
                 ft.nombre AS formatoTorneo,
 
-                et.posicion AS posicionFinal,
+                et.posicion AS posicion,
                 et.puntosAcumulados AS puntos,
                 et.fechaInscripcion AS fechaInscripcion
 
