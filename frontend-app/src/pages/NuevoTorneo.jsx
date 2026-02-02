@@ -118,12 +118,22 @@ export default function RegisterTorneo() {
     e.preventDefault();
     if (isLoading) return;
 
+    if (!formData.fechaHoraInicio) {
+        setErroresCampos({ fechaHoraInicio: "Debes seleccionar una fecha y hora de inicio." });
+        setResultado("Por favor, completa los campos obligatorios.");
+        return;
+    }
+
     if (formData.fechaHoraInicio) {
         const fechaLocal = new Date(formData.fechaHoraInicio);
+        if (isNaN(fechaLocal.getTime())) {
+             setErroresCampos({ fechaHoraInicio: "Formato de fecha inválido." });
+             return;
+        }
         if (fechaLocal < new Date()) {
              setErroresCampos({ fechaHoraInicio: "La fecha no puede estar en el pasado." });
              setResultado("Por favor, corrige la fecha de inicio.");
-             return; // Para si es fecha pasada
+             return; 
         }
     }
 

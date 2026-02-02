@@ -132,27 +132,40 @@ def datos_usuario(usuario_actual: dict = Depends(obtener_usuario_actual)):
 def editar_datos_usuario(datos: UsuarioEditar, usuario_actual: dict = Depends(obtener_usuario_actual)):
     conn = None
     try:
+        #Validaciones manuales de nombre y apellidos
+        if not datos.nombre or not datos.nombre.strip():
+            raise HTTPException(status_code=400, detail="El nombre es obligatorio.")
+        
+        if not datos.apellidos or not datos.apellidos.strip():
+            raise HTTPException(status_code=400, detail="Los apellidos son obligatorios.")
+
         idUsuario = usuario_actual["idUsuario"]
         conn = get_connection()
         cursor = conn.cursor()
 
         #Validar Email duplicado
-        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s AND idUsuario != %s", (datos.email, idUsuario))
+        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s AND idUsuario != %s", (datos.email.strip(), idUsuario))
         if cursor.fetchone():
-            raise HTTPException(status_code=409, detail="Ha habido un problema con el campo: email. Inténtelo de nuevo más tarde.")
+            raise HTTPException(status_code=409, detail="El email ya está registrado por otro usuario.")
 
         #Validar Teléfono duplicado
         if datos.telefono:
-            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s AND idUsuario != %s", (datos.telefono, idUsuario))
+            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s AND idUsuario != %s", (datos.telefono.strip(), idUsuario))
             if cursor.fetchone():
-                raise HTTPException(status_code=409, detail="Ha habido un problema con el campo: teléfono. Inténtelo de nuevo más tarde.")
+                raise HTTPException(status_code=409, detail="El teléfono ya está registrado por otro usuario.")
 
-        #Update
         cursor.execute("""
             UPDATE Usuario
             SET nombre = %s, apellidos = %s, email = %s, localidad = %s, telefono = %s
             WHERE idUsuario = %s;
-        """, (datos.nombre, datos.apellidos, datos.email, datos.localidad, datos.telefono, idUsuario))
+        """, (
+            datos.nombre.strip(), 
+            datos.apellidos.strip(), 
+            datos.email.strip(), 
+            datos.localidad.strip() if datos.localidad else None, 
+            datos.telefono.strip(), 
+            idUsuario
+        ))
 
         conn.commit()
         return {"message": "Datos actualizados correctamente"}
@@ -165,7 +178,8 @@ def editar_datos_usuario(datos: UsuarioEditar, usuario_actual: dict = Depends(ob
         raise HTTPException(status_code=500, detail="Ha ocurrido un error al guardar los datos.")
     finally:
         if conn and conn.is_connected(): conn.close()
-        
+
+
 #Cambiar contraseña
 @router.post("/cambiar_password")
 def cambiar_password(datos: PasswordChange, usuario_actual: dict = Depends(obtener_usuario_actual)):

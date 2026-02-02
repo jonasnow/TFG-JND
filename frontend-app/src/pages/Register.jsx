@@ -45,7 +45,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    //Validaciones existentes
+    // Validaciones existentes
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setEmailError("Por favor, introduce un correo electrónico válido.");
@@ -67,15 +67,22 @@ export default function Register() {
       return;
     }
 
+    if (!formData.nombre.trim() || !formData.apellidos.trim()) {
+      setMensaje("Nombre y Apellidos son obligatorios y no pueden estar vacíos.");
+      setExito(false);
+      setMostrarResultado(true);
+      return;
+    }
+
     setProcesando(true);
 
     const payload = {
-      nombre: formData.nombre,
-      apellidos: formData.apellidos,
-      localidad: formData.localidad,
-      email: formData.email,
+      nombre: formData.nombre.trim(),
+      apellidos: formData.apellidos.trim(),
+      localidad: formData.localidad.trim(),
+      email: formData.email.trim(),
       password: formData.password,
-      telefono: formData.telefono
+      telefono: formData.telefono.trim()
     };
 
     try {
@@ -93,7 +100,12 @@ export default function Register() {
         setMensaje(result.mensaje || "Registrado correctamente.");
         setExito(true);
       } else {
-        setMensaje(result.detail || "Error al crear el usuario.");
+        //Mensaje genérico
+        const msg = Array.isArray(result.detail)
+          ? "Datos inválidos. Revisa los campos."
+          : (result.detail || "Error al crear el usuario.");
+
+        setMensaje(msg);
         setExito(false);
       }
 
@@ -107,7 +119,6 @@ export default function Register() {
       setProcesando(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-play">
       <Navbar />

@@ -16,17 +16,24 @@ router = APIRouter(tags=["Autenticación"])
 def crear_usuario(usuario: UsuarioRegistro):
     conn = None
     try:
+        #Validación de nombre y apellidos
+        if not usuario.nombre or not usuario.nombre.strip():
+            raise HTTPException(status_code=400, detail="El nombre es obligatorio.")
+        
+        if not usuario.apellidos or not usuario.apellidos.strip():
+            raise HTTPException(status_code=400, detail="Los apellidos son obligatorios.")
+
         conn = get_connection()
         cursor = conn.cursor()
 
         #Comprobación de email y teléfono únicos
         conflict = False
-        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s", (usuario.email,))
+        cursor.execute("SELECT idUsuario FROM Usuario WHERE email = %s", (usuario.email.strip(),))
         if cursor.fetchone():
             conflict = True
 
         if not conflict and usuario.telefono:
-            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s", (usuario.telefono,))
+            cursor.execute("SELECT idUsuario FROM Usuario WHERE telefono = %s", (usuario.telefono.strip(),))
             if cursor.fetchone():
                 conflict = True
         
@@ -46,7 +53,14 @@ def crear_usuario(usuario: UsuarioRegistro):
         cursor.execute("""
             INSERT INTO Usuario (nombre, apellidos, localidad, email, password_hash, telefono)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (usuario.nombre, usuario.apellidos, usuario.localidad, usuario.email, password_hash, usuario.telefono))
+        """, (
+            usuario.nombre.strip(), 
+            usuario.apellidos.strip(), 
+            usuario.localidad.strip() if usuario.localidad else None, 
+            usuario.email.strip(), 
+            password_hash, 
+            usuario.telefono.strip()
+        ))
         
         new_user_id = cursor.lastrowid
 
@@ -59,11 +73,11 @@ def crear_usuario(usuario: UsuarioRegistro):
         return {"mensaje": "Usuario registrado correctamente"}
 
     except HTTPException as he:
+        if conn: conn.rollback()
         raise he
     except Exception as e:
         if conn: conn.rollback()
         print(f"Error Register: {e}") 
-        #Error genérico para cualquier fallo de servidor
         raise HTTPException(status_code=500, detail="Error interno del servidor. Inténtelo más tarde.")
     finally:
         if conn and conn.is_connected(): conn.close()

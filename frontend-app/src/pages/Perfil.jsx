@@ -221,32 +221,56 @@ export default function Perfil() {
   const iniciarEdicion = () => { setDatosEditables({ ...datosUsuario }); setModoEdicion(true); };
   const cerrarCambioPassword = () => { setMostrarCambioPassword(false); setPasswordData({ passwordActual: "", nuevaPassword: "", confirmarPassword: "" }); setErrorPassword(""); };
 
-  const guardarCambios = async () => {
+const guardarCambios = async () => {
     setErrorEdicion(null);
 
-    if (!datosEditables.nombre?.trim() ||
-      !datosEditables.apellidos?.trim() ||
-      !datosEditables.email?.trim()) {
+    if (!datosEditables.nombre?.trim() || 
+        !datosEditables.apellidos?.trim() || 
+        !datosEditables.email?.trim()) {
       setErrorEdicion("Nombre, Apellidos y Email son obligatorios y no pueden estar vacíos.");
       return;
     }
 
     setProcesandoEdicion(true);
 
+    const payload = {
+        ...datosEditables,
+        nombre: datosEditables.nombre.trim(),
+        apellidos: datosEditables.apellidos.trim(),
+        email: datosEditables.email.trim(),
+        localidad: datosEditables.localidad ? datosEditables.localidad.trim() : "",
+        telefono: datosEditables.telefono ? datosEditables.telefono.trim() : ""
+    };
+
     try {
       const response = await fetch(`${API_URL}/editar_perfil`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(datosEditables),
+        method: "PUT", 
+        headers: { "Content-Type": "application/json" }, 
+        credentials: "include", 
+        body: JSON.stringify(payload),
       });
+      
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || "Error al guardar");
+        if (Array.isArray(data.detail)) {
+             setErrorEdicion("Datos inválidos. Revisa los campos (longitud, formato...).");
+        } else {
+             setErrorEdicion(data.detail || "Error al guardar los cambios.");
+        }
+      } else {
+          setDatosUsuario(prev => ({ ...prev, ...payload }));
+          setMensajeExito("Datos actualizados correctamente.");
+          setModoEdicion(false);
+          setMostrarConfirmacionEdicion(false); //Cierra el modal si estaba abierto
       }
 
-      setDatosUsuario(prev => ({ ...prev, ...datosEditables }));
-      setMensajeExito("Datos actualizados.");
-      setModoEdicion(false);
-    } catch (err) { setErrorEdicion(err.message); }
-    finally { setProcesandoEdicion(false); setMostrarConfirmacionEdicion(false); }
+    } catch (err) { 
+        setErrorEdicion("Error de conexión con el servidor."); 
+    } finally { 
+        setProcesandoEdicion(false); 
+        if (errorEdicion) setMostrarConfirmacionEdicion(false); 
+    }
   };
 
   const guardarPassword = async () => {

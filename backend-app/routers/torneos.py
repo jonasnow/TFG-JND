@@ -284,12 +284,22 @@ def verificar_inscripcion(idTorneo: int, usuario_actual: dict = Depends(obtener_
 
 #Crear torneo
 @router.post("/torneo", status_code=201)
-def crear_torneo(
-    torneo: Torneo, 
-    usuario_actual: dict = Depends(obtener_usuario_actual) 
-):    
+def crear_torneo(torneo: Torneo, usuario_actual: dict = Depends(obtener_usuario_actual)):
     conn = get_connection()
     try:
+        #Validaciones previas
+        if not torneo.nombre or not torneo.nombre.strip():
+            raise HTTPException(status_code=400, detail="El nombre del torneo es obligatorio.")
+        
+        if not torneo.lugarCelebracion or not torneo.lugarCelebracion.strip():
+            raise HTTPException(status_code=400, detail="El lugar de celebración es obligatorio.")
+
+        if not torneo.fechaHoraInicio:
+            raise HTTPException(status_code=400, detail="La fecha y hora de inicio son obligatorias.")
+
+        if torneo.plazasMax is not None and torneo.plazasMax < 2:
+            raise HTTPException(status_code=400, detail="El número de plazas debe ser al menos 2.")
+
         cursor = conn.cursor()
         
         cursor.execute("SELECT numMaxJugadores FROM FormatoJuego WHERE idFormatoJuego = %s", (torneo.idFormatoJuego,))
@@ -300,11 +310,9 @@ def crear_torneo(
             
         num_max_jugadores = resultado[0]
 
-        #Validación Round Robin
         if torneo.idFormatoTorneo == 3 and num_max_jugadores > 2:
-            raise HTTPException(status_code=400, detail="Formato de juego inválido para Round Robin")
+            raise HTTPException(status_code=400, detail="El formato Round Robin solo es válido para juegos de 1vs1 (max 2 jugadores).")
 
-        #Autocorrección plazas
         plazas_finales = torneo.plazasMax
         if plazas_finales is None:
             plazas_finales = num_max_jugadores
@@ -318,29 +326,42 @@ def crear_torneo(
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         values = (
-            torneo.nombre, torneo.descripcion, torneo.precioInscripcion, torneo.numeroRondas,
-            torneo.duracionRondas, torneo.fechaHoraInicio, torneo.lugarCelebracion, plazas_finales,
-            id_organizador, torneo.idFormatoTorneo, torneo.idJuego, torneo.idFormatoJuego,
-            torneo.idLiga, torneo.premios, torneo.estado
+            torneo.nombre.strip(),
+            torneo.descripcion, 
+            torneo.precioInscripcion, 
+            torneo.numeroRondas,
+            torneo.duracionRondas, 
+            torneo.fechaHoraInicio, 
+            torneo.lugarCelebracion.strip(),
+            plazas_finales,
+            id_organizador, 
+            torneo.idFormatoTorneo, 
+            torneo.idJuego, 
+            torneo.idFormatoJuego,
+            torneo.idLiga, 
+            torneo.premios, 
+            "PLANIFICADO"
         )
-        print(torneo)
+        
         cursor.execute(query, values)
         conn.commit()
         
-        return {"mensaje": f"Torneo '{torneo.nombre}' creado correctamente", "id": cursor.lastrowid}
+        return {"mensaje": f"Torneo '{torneo.nombre.strip()}' creado correctamente", "id": cursor.lastrowid}
 
     except HTTPException as he:
         raise he
     except mysql.connector.IntegrityError as e:
         if e.errno == 1452:
-            raise HTTPException(status_code=400, detail="Un dato indicado no existe.")
-        raise HTTPException(status_code=500, detail="Error de integridad de datos.")
+            raise HTTPException(status_code=400, detail="Un dato indicado (Juego, Formato, Liga) no existe en la base de datos.")
+        print(f"Error Integridad DB: {e}")
+        raise HTTPException(status_code=500, detail="Error al guardar el torneo. Verifica los datos.")
     except Exception as e:
         conn.rollback()
-        print(f"Error DB: {e}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor al crear torneo")
+        print(f"Error General DB: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
     finally:
-        conn.close()
+        if conn and conn.is_connected():
+            conn.close()
 
 #Eliminar miembro de un torneo
 @router.delete("/eliminar_equipo_torneo/{id_torneo}/{id_equipo}")
@@ -772,25 +793,55 @@ def deshacer_asistencia(datos: dict, usuario_actual: dict = Depends(obtener_usua
 def editar_torneo(id_torneo: int, torneo: Torneo, usuario_actual: dict = Depends(obtener_usuario_actual)):
     conn = None
     try:
+
+        #Validaciones previas
+        if not torneo.nombre or not torneo.nombre.strip():
+            raise HTTPException(status_code=400, detail="El nombre del torneo es obligatorio.")
+        if not torneo.lugarCelebracion or not torneo.lugarCelebracion.strip():
+            raise HTTPException(status_code=400, detail="El lugar de celebración es obligatorio.")
+        if not torneo.fechaHoraInicio:
+            raise HTTPException(status_code=400, detail="La fecha y hora de inicio son obligatorias.")
+        if torneo.precioInscripcion is None or torneo.precioInscripcion < 0:
+            raise HTTPException(status_code=400, detail="El precio de inscripción no es válido.")
+
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT idOrganizador FROM Torneo WHERE idTorneo = %s", (id_torneo,))
+        cursor.execute("SELECT idOrganizador, estado FROM Torneo WHERE idTorneo = %s", (id_torneo,))
         torneo_db = cursor.fetchone()
 
         if not torneo_db:
             raise HTTPException(status_code=404, detail="El torneo no existe")
 
         if torneo_db["idOrganizador"] != usuario_actual["idUsuario"]:
-            raise HTTPException(
-                status_code=403,
-                detail="No tienes permiso para editar este torneo"
-            )
-        if torneo_db["estado"] != "PLANIFICADO":
-            raise HTTPException(
-                status_code=400, 
-                detail="No se puede editar un torneo que no está pendiente de comenzar."
-            )
+            raise HTTPException(status_code=403, detail="No tienes permiso para editar este torneo")
+
+        if torneo_db["estado"] != "PLANIFICADO": #Para cancelar
+            if torneo.estado != "CANCELADO":
+                raise HTTPException(status_code=400, detail="No se puede editar un torneo iniciado o finalizado.")
+
+        nuevo_estado = torneo_db["estado"] 
+        if torneo.estado == "CANCELADO":
+            nuevo_estado = "CANCELADO"
+        elif torneo_db["estado"] == "PLANIFICADO":
+            nuevo_estado = "PLANIFICADO"
+
+        cursor.execute("SELECT numMaxJugadores FROM FormatoJuego WHERE idFormatoJuego = %s", (torneo.idFormatoJuego,))
+        res_formato = cursor.fetchone()
+        
+        if not res_formato:
+            raise HTTPException(status_code=400, detail="Formato de juego inválido")
+            
+        num_max_jugadores = res_formato["numMaxJugadores"]
+
+        if torneo.idFormatoTorneo == 3 and num_max_jugadores > 2:
+            raise HTTPException(status_code=400, detail="El formato Round Robin solo es válido para juegos de 1vs1 (max 2 jugadores).")
+
+        plazas_finales = torneo.plazasMax
+        if plazas_finales is None:
+            plazas_finales = num_max_jugadores
+        elif plazas_finales < 2:
+             raise HTTPException(status_code=400, detail="El número de plazas debe ser al menos 2.")
 
         cursor.execute("""
             UPDATE Torneo
@@ -801,20 +852,36 @@ def editar_torneo(id_torneo: int, torneo: Torneo, usuario_actual: dict = Depends
                 premios = %s, estado = %s
             WHERE idTorneo = %s;
         """, (
-            torneo.nombre, torneo.descripcion, torneo.precioInscripcion,
-            torneo.numeroRondas, torneo.duracionRondas, torneo.fechaHoraInicio,
-            torneo.lugarCelebracion, torneo.plazasMax, torneo.idFormatoTorneo,
-            torneo.idJuego, torneo.idFormatoJuego, torneo.idLiga,
-            torneo.premios, torneo.estado,
+            torneo.nombre.strip(), 
+            torneo.descripcion, 
+            torneo.precioInscripcion,
+            torneo.numeroRondas, 
+            torneo.duracionRondas, 
+            torneo.fechaHoraInicio,
+            torneo.lugarCelebracion.strip(), 
+            plazas_finales,
+            torneo.idFormatoTorneo,
+            torneo.idJuego, 
+            torneo.idFormatoJuego, 
+            torneo.idLiga,
+            torneo.premios, 
+            nuevo_estado, 
             id_torneo
         ))
 
         conn.commit()
+        
+        if nuevo_estado == "CANCELADO":
+            return {"mensaje": "Torneo cancelado correctamente"}
+            
         return {"mensaje": "Torneo actualizado correctamente"}
 
     except HTTPException:
+        if conn: conn.rollback()
         raise
     except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error editar torneo: {e}") 
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn and conn.is_connected():

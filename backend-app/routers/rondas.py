@@ -319,6 +319,7 @@ def cerrar_ronda(datos: AccionRonda, current_user: dict = Depends(obtener_usuari
         if conn and conn.is_connected(): conn.close()
 
 #Generar siguiente ronda
+# Generar siguiente ronda
 @router.post("/generar-siguiente-ronda")
 def generar_siguiente_ronda(datos: AccionRonda, current_user: dict = Depends(obtener_usuario_actual)):
     conn = None
@@ -328,9 +329,10 @@ def generar_siguiente_ronda(datos: AccionRonda, current_user: dict = Depends(obt
 
         cursor = conn.cursor(dictionary=True)
         
+        # Seguridad
         verificar_permiso_organizador(cursor, datos.idTorneo, current_user["idUsuario"])
         
-        #1. Datos básicos
+        #Datos básicos
         cursor.execute("""
             SELECT t.idFormatoTorneo, fj.numMaxJugadores 
             FROM Torneo t JOIN FormatoJuego fj ON t.idFormatoJuego = fj.idFormatoJuego 
@@ -343,26 +345,37 @@ def generar_siguiente_ronda(datos: AccionRonda, current_user: dict = Depends(obt
         cursor.execute("SELECT MAX(numeroRonda) as actual FROM Enfrentamiento WHERE idTorneo=%s", (datos.idTorneo,))
         ronda_actual = cursor.fetchone()["actual"]
         
-        #2. Selección de los jugadores (Eliminación vs Suizo)
+        #Selección de los jugadores (Eliminación vs Suizo)
         ranking = []
-        if id_formato == 2: #Eliminación: Solo pasan ganadores (>0 puntos esta ronda)
+        
+        if id_formato == 2: #Eliminación: Ganadores de ronda anterior + VALIDACIÓN DE ESTADO
             cursor.execute("""
                 SELECT ee.idEquipo FROM Equipo_Enfrentamiento ee
                 JOIN Enfrentamiento e ON ee.idEnfrentamiento = e.idEnfrentamiento
-                WHERE e.idTorneo = %s AND e.numeroRonda = %s AND ee.puntosObtenidos > 0
+                JOIN Equipo_Torneo et ON ee.idEquipo = et.idEquipo AND et.idTorneo = e.idTorneo
+                WHERE e.idTorneo = %s 
+                AND e.numeroRonda = %s 
+                AND ee.puntosObtenidos > 0
+                AND et.confirmacionInscripcion = 'CONFIRMADA' 
+                AND et.confirmacionAsistencia = 'CONFIRMADA'
                 ORDER BY ee.puntosObtenidos DESC
             """, (datos.idTorneo, ronda_actual))
+            
             ranking = [e["idEquipo"] for e in cursor.fetchall()]
+            
             if len(ranking) < 2: 
                 #Si queda 1 o 0, fin del torneo
                 cursor.execute("UPDATE Torneo SET estado='FINALIZADO' WHERE idTorneo=%s", (datos.idTorneo,))
                 conn.commit()
                 return {"mensaje": "Torneo finalizado", "finalizado": True}
-        else: #Suizo/Liga: Pasan todos
+        
+        else: #Suizo/Liga: Todos los inscritos
             cursor.execute("""
                 SELECT et.idEquipo FROM Equipo_Torneo et 
                 LEFT JOIN Equipo e ON et.idEquipo = e.idEquipo 
                 WHERE et.idTorneo=%s 
+                AND et.confirmacionInscripcion = 'CONFIRMADA' 
+                AND et.confirmacionAsistencia = 'CONFIRMADA'
                 ORDER BY et.puntosAcumulados DESC, e.nombre ASC
             """, (datos.idTorneo,))
             ranking = [e["idEquipo"] for e in cursor.fetchall()]
@@ -390,6 +403,7 @@ def generar_siguiente_ronda(datos: AccionRonda, current_user: dict = Depends(obt
         return {"error": str(e)}
     finally:
         if conn and conn.is_connected(): conn.close()
+
 
 #Obtener clasificación actual del torneo
 @router.get("/{id_torneo}/clasificacion")

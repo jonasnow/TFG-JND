@@ -14,12 +14,20 @@ export default function TorneoDetalle() {
     const [cargandoInscripcion, setCargandoInscripcion] = useState(true);
     const [error, setError] = useState(null);
 
+    // Estados para Edición
     const [modoEdicion, setModoEdicion] = useState(false);
     const [datosEditables, setDatosEditables] = useState(null);
     const [procesandoEdicion, setProcesandoEdicion] = useState(false);
     const [mensajeEdicion, setMensajeEdicion] = useState("");
 
+    // Listas para los Selects (Desplegables)
+    const [listaJuegos, setListaJuegos] = useState([]);
+    const [listaFormatosTorneo, setListaFormatosTorneo] = useState([]);
+    const [listaFormatosJuego, setListaFormatosJuego] = useState([]);
+
+    // Modales
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+    const [mostrarConfirmacionCancelar, setMostrarConfirmacionCancelar] = useState(false);
     const [procesandoInscripcion, setProcesandoInscripcion] = useState(false);
     const [mostrarResultado, setMostrarResultado] = useState(false);
     const [mensajeResultado, setMensajeResultado] = useState("");
@@ -29,16 +37,35 @@ export default function TorneoDetalle() {
 
     const getMinDateTime = () => {
         const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Ajuste a local para el input
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         return now.toISOString().slice(0, 16);
     };
 
+    // 1. Cargar Torneo y Listas Auxiliares (Juegos, Formatos)
     useEffect(() => {
-        const fetchTorneo = async () => {
+        if (!id) return;
+        const fetchData = async () => {
             try {
-                const response = await fetch(`${API_URL}/torneo/${id}`);
-                if (response.ok) {
-                    setTorneo(await response.json());
+                // Cargamos datos del torneo y listas maestras
+                const [resTorneo, resJuegos, resFormatosT] = await Promise.all([
+                    fetch(`${API_URL}/torneo/${id}`),
+                    fetch(`${API_URL}/juegos`),
+                    fetch(`${API_URL}/formatos_torneo`)
+                ]);
+
+                if (resTorneo.ok) {
+                    const dataTorneo = await resTorneo.json();
+                    setTorneo(dataTorneo);
+
+                    // Guardamos las listas
+                    if (resJuegos.ok) setListaJuegos(await resJuegos.json());
+                    if (resFormatosT.ok) setListaFormatosTorneo(await resFormatosT.json());
+
+                    // Cargar formatos específicos del juego actual
+                    if (dataTorneo.idJuego) {
+                        const resFormJuego = await fetch(`${API_URL}/formatos_juego/${dataTorneo.idJuego}`);
+                        if (resFormJuego.ok) setListaFormatosJuego(await resFormJuego.json());
+                    }
                 } else {
                     setError("No se pudo cargar el torneo.");
                 }
@@ -46,10 +73,10 @@ export default function TorneoDetalle() {
                 setError("Error de conexión.");
             }
         };
-        if (id) fetchTorneo();
+        fetchData();
     }, [id]);
 
-    //2. Comprobar Inscripción
+    // 2. Comprobar Inscripción
     useEffect(() => {
         if (!user || !id) {
             setCargandoInscripcion(false);
@@ -75,7 +102,7 @@ export default function TorneoDetalle() {
         checkInscripcion();
     }, [user, id]);
 
-
+    // 3. Redirección Automática si FINALIZADO
     useEffect(() => {
         if (!user || !torneo || cargandoInscripcion) return;
 
@@ -83,12 +110,24 @@ export default function TorneoDetalle() {
             const esOrganizador = user.idUsuario === torneo.idOrganizador;
             const esParticipante = estadoInscripcion?.confirmacionInscripcion === "CONFIRMADA";
 
-            // Si es parte del torneo y ya acabó, ver los resultados/historial
             if (esOrganizador || esParticipante) {
                 navigate(`/torneo/${slug}/en-curso/detalle`, { replace: true });
             }
         }
     }, [torneo, user, estadoInscripcion, cargandoInscripcion, navigate, slug]);
+
+    // 4. Efecto dinámico: Cargar formatos de juego al cambiar el juego en edición
+    useEffect(() => {
+        if (modoEdicion && datosEditables?.idJuego) {
+            const fetchFormatosJuego = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/formatos_juego/${datosEditables.idJuego}`);
+                    if (res.ok) setListaFormatosJuego(await res.json());
+                } catch (e) { console.error(e); }
+            };
+            fetchFormatosJuego();
+        }
+    }, [modoEdicion, datosEditables?.idJuego]);
 
 
     const esOrganizador = user && torneo && user.idUsuario === torneo.idOrganizador;
@@ -96,6 +135,7 @@ export default function TorneoDetalle() {
     const plazasDisponibles = torneo ? torneo.plazasMax - ocupadas : 0;
     const inscripcionStatus = estadoInscripcion?.confirmacionInscripcion;
 
+    // --- FUNCIONES EDICIÓN ---
     const iniciarEdicion = () => {
         setDatosEditables({ ...torneo });
         setModoEdicion(true);
@@ -108,19 +148,42 @@ export default function TorneoDetalle() {
         setMensajeEdicion("");
     };
 
+    const handleEditChange = (e) => {
+        const { name, value } = e.target;
+        setDatosEditables(prev => ({ ...prev, [name]: value }));
+    };
+
     const guardarEdicion = async () => {
         setProcesandoEdicion(true);
         setMensajeEdicion("");
-        const payload = { ...datosEditables };
 
+        // 1. Sanitización de datos (Convertir texto a números)
+        const payload = { 
+            ...datosEditables,
+            precioInscripcion: datosEditables.precioInscripcion === "" ? 0 : Number(datosEditables.precioInscripcion),
+            numeroRondas: datosEditables.numeroRondas === "" ? 0 : parseInt(datosEditables.numeroRondas),
+            duracionRondas: datosEditables.duracionRondas === "" ? 0 : parseInt(datosEditables.duracionRondas),
+            plazasMax: datosEditables.plazasMax === "" ? null : parseInt(datosEditables.plazasMax),
+            idJuego: parseInt(datosEditables.idJuego),
+            idFormatoJuego: parseInt(datosEditables.idFormatoJuego),
+            idFormatoTorneo: parseInt(datosEditables.idFormatoTorneo),
+        };
+
+        // 2. Validación manual de Fecha
         if (payload.fechaHoraInicio) {
-            const fechaObj = new Date(payload.fechaHoraInicio); //Conversion UTC
+            const fechaObj = new Date(payload.fechaHoraInicio);
+            if (isNaN(fechaObj.getTime())) {
+                 setMensajeEdicion("Formato de fecha inválido.");
+                 setProcesandoEdicion(false); return;
+            }
             if (fechaObj < new Date()) {
                 setMensajeEdicion("La fecha no puede estar en el pasado.");
-                setProcesandoEdicion(false);
-                return;
+                setProcesandoEdicion(false); return;
             }
             payload.fechaHoraInicio = fechaObj.toISOString();
+        } else {
+             setMensajeEdicion("La fecha es obligatoria.");
+             setProcesandoEdicion(false); return;
         }
 
         try {
@@ -128,30 +191,63 @@ export default function TorneoDetalle() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify(datosEditables),
+                body: JSON.stringify(payload),
             });
 
-            const result = await response.json();
+            // const result = await response.json(); // Lo leemos, pero no mostramos el detalle técnico
 
             if (!response.ok) {
-                setMensajeEdicion(result.detail || "Error al guardar cambios.");
+                // AQUÍ ESTÁ EL MENSAJE GENÉRICO QUE PEDISTE
+                setMensajeEdicion("No se ha podido procesar la petición debido a que existe un dato incorrecto o vacío, por favor revise los campos.");
             } else {
-                setTorneo({ ...datosEditables });
+                setTorneo({ 
+                    ...payload,
+                    // Actualizamos los nombres visuales para que se vea el cambio sin recargar
+                    nombreJuego: listaJuegos.find(j => j.idJuego == payload.idJuego)?.nombre || torneo.nombreJuego,
+                    formato: listaFormatosTorneo.find(f => f.idFormatoTorneo == payload.idFormatoTorneo)?.nombre || torneo.nombreFormatoTorneo 
+                });
                 setModoEdicion(false);
                 setMensajeResultado("Torneo actualizado correctamente");
                 setTipoResultado("success");
                 setMostrarResultado(true);
             }
         } catch (error) {
-            setMensajeEdicion("Error de conexión al guardar.");
+            setMensajeEdicion("Error de conexión al intentar guardar.");
         } finally {
             setProcesandoEdicion(false);
         }
     };
 
-    const handleEditChange = (e) => {
-        const { name, value } = e.target;
-        setDatosEditables(prev => ({ ...prev, [name]: value }));
+    const cancelarTorneo = async () => {
+        setProcesandoEdicion(true);
+        try {
+            const payload = { ...torneo, estado: "CANCELADO" }; 
+            
+            const response = await fetch(`${API_URL}/editar_torneo/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            });
+  
+            if (!response.ok) {
+                setMensajeEdicion("No se pudo cancelar el torneo.");
+                // Opcional: throw new Error("Error") si quieres ir al catch
+            } else {
+                setMensajeResultado("Torneo cancelado correctamente");
+                setTipoResultado("success");
+                setMostrarResultado(true);
+                
+                // Recargar para bloquear edición
+                setTimeout(() => window.location.reload(), 1500);
+            }
+  
+        } catch (e) {
+            setMensajeEdicion("Error de conexión.");
+        } finally {
+            setProcesandoEdicion(false);
+            setMostrarConfirmacionCancelar(false);
+        }
     };
 
     const handleInscripcion = async () => {
@@ -188,7 +284,6 @@ export default function TorneoDetalle() {
     const renderAcciones = () => {
         if (modoEdicion) return null;
 
-        //Organizador
         const botonOrganizador = (esOrganizador && (torneo.estado === "PLANIFICADO" || torneo.estado === "EN_CURSO")) ? (
             <button
                 onClick={() => navigate(torneo.estado === "EN_CURSO" ? `/torneo/${slug}/en-curso` : `/torneo/gestion/${slug}`)}
@@ -198,7 +293,6 @@ export default function TorneoDetalle() {
             </button>
         ) : null;
 
-        //Jugador
         let contenidoJugador = null;
 
         if (cargandoInscripcion) {
@@ -208,7 +302,6 @@ export default function TorneoDetalle() {
             contenidoJugador = (
                 <div className="flex flex-col items-center gap-4 w-full">
                     <div className="bg-green-500/20 text-green-400 p-4 rounded-xl border border-green-500/50 font-bold w-full text-center">✅ Estás inscrito en este torneo</div>
-                    
                     {(torneo.estado === "EN_CURSO" || torneo.estado === "FINALIZADO") && (
                         <button onClick={() => navigate(`/torneo/${slug}/en-curso/detalle`)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg">
                             📊 Panel del Torneo
@@ -224,7 +317,6 @@ export default function TorneoDetalle() {
             contenidoJugador = <div className="bg-red-500/20 text-red-400 p-4 rounded-xl border border-red-500/50 font-bold w-full text-center">❌ Tu inscripción fue rechazada</div>;
         }
         else {
-            //No inscrito
             contenidoJugador = (
                 <>
                     {torneo.estado === "PLANIFICADO" ? (
@@ -307,15 +399,23 @@ export default function TorneoDetalle() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6 mb-8 text-lg">
+                    {/* Organizador */}
                     <div>
                         <p className="text-gray-400 text-sm">Organizador</p>
                         <p className="font-semibold">{torneo.nombreOrganizador}</p>
                     </div>
+
+                    {/* Juego */}
                     <div>
                         <p className="text-gray-400 text-sm">Juego</p>
-                        <p className="font-semibold">{torneo.nombreJuego}</p>
+                        {modoEdicion ? (
+                            <select name="idJuego" value={datosEditables.idJuego} onChange={handleEditChange} className="w-full bg-[var(--color-bg)] border border-gray-600 rounded p-1">
+                                {listaJuegos.map(j => <option key={j.idJuego} value={j.idJuego}>{j.nombre}</option>)}
+                            </select>
+                        ) : <p className="font-semibold">{torneo.nombreJuego}</p>}
                     </div>
 
+                    {/* Fecha */}
                     <div>
                         <p className="text-gray-400 text-sm">Fecha y Hora</p>
                         {modoEdicion ? (
@@ -323,10 +423,7 @@ export default function TorneoDetalle() {
                                 type="datetime-local" name="fechaHoraInicio"
                                 value={(() => {
                                     if (!datosEditables.fechaHoraInicio) return "";
-                                    const fechaStr = datosEditables.fechaHoraInicio.endsWith("Z")
-                                        ? datosEditables.fechaHoraInicio
-                                        : datosEditables.fechaHoraInicio + "Z";
-
+                                    const fechaStr = datosEditables.fechaHoraInicio.endsWith("Z") ? datosEditables.fechaHoraInicio : datosEditables.fechaHoraInicio + "Z";
                                     const date = new Date(fechaStr);
                                     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
                                     return localDate.toISOString().slice(0, 16);
@@ -340,6 +437,7 @@ export default function TorneoDetalle() {
                             </p>)}
                     </div>
 
+                    {/* Lugar */}
                     <div>
                         <p className="text-gray-400 text-sm">Lugar</p>
                         {modoEdicion ? (
@@ -350,27 +448,57 @@ export default function TorneoDetalle() {
                                 maxLength={150}
                                 className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600"
                             />
-                        ) : (
-                            <p className="font-semibold">{torneo.lugarCelebracion}</p>
-                        )}
+                        ) : <p className="font-semibold">{torneo.lugarCelebracion}</p>}
                     </div>
 
+                    {/* Plazas */}
                     <div>
                         <p className="text-gray-400 text-sm">Plazas Totales</p>
                         {modoEdicion ? (
                             <input type="number" name="plazasMax" inputMode="numeric" min="2" value={datosEditables.plazasMax} onChange={handleEditChange} className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600" />
-                        ) : (
-                            <p className="font-semibold">{torneo.plazasMax}</p>
-                        )}
+                        ) : <p className="font-semibold">{torneo.plazasMax}</p>}
                     </div>
 
+                    {/* Precio */}
                     <div>
                         <p className="text-gray-400 text-sm">Precio Inscripción</p>
                         {modoEdicion ? (
                             <input type="number" name="precioInscripcion" inputMode="decimal" min="0" value={datosEditables.precioInscripcion} onChange={handleEditChange} className="bg-[var(--color-bg)] p-1 rounded w-full border border-gray-600" />
-                        ) : (
-                            <p className="font-semibold">{torneo.precioInscripcion} €</p>
-                        )}
+                        ) : <p className="font-semibold">{torneo.precioInscripcion} €</p>}
+                    </div>
+
+                    {/* Formato Juego */}
+                    <div>
+                        <p className="text-gray-400 text-sm">Formato Juego</p>
+                        {modoEdicion ? (
+                            <select name="idFormatoJuego" value={datosEditables.idFormatoJuego} onChange={handleEditChange} className="w-full bg-[var(--color-bg)] border border-gray-600 rounded p-1">
+                                {listaFormatosJuego.map(f => <option key={f.idFormatoJuego} value={f.idFormatoJuego}>{f.nombre}</option>)}
+                            </select>
+                        ) : <p className="font-semibold">{listaFormatosJuego.find(f => f.idFormatoJuego === torneo.idFormatoJuego)?.nombre || "Standard"}</p>}
+                    </div>
+
+                    {/* Formato Torneo */}
+                    <div>
+                        <p className="text-gray-400 text-sm">Formato Torneo</p>
+                        {modoEdicion ? (
+                            <select name="idFormatoTorneo" value={datosEditables.idFormatoTorneo} onChange={handleEditChange} className="w-full bg-[var(--color-bg)] border border-gray-600 rounded p-1">
+                                {listaFormatosTorneo.map(f => <option key={f.idFormatoTorneo} value={f.idFormatoTorneo}>{f.nombre}</option>)}
+                            </select>
+                        ) : <p className="font-semibold">{torneo.nombreFormatoTorneo}</p>}
+                    </div>
+
+                    <div>
+                        <p className="text-gray-400 text-sm">Nº Rondas</p>
+                        {modoEdicion ? (
+                            <input type="number" name="numeroRondas" min="1" value={datosEditables.numeroRondas || ""} onChange={handleEditChange} placeholder="Auto" className="w-full bg-[var(--color-bg)] border border-gray-600 rounded p-1" />
+                        ) : <p className="font-semibold">{torneo.numeroRondas || "Auto"}</p>}
+                    </div>
+
+                    <div>
+                        <p className="text-gray-400 text-sm">Duración (min)</p>
+                        {modoEdicion ? (
+                            <input type="number" name="duracionRondas" min="1" value={datosEditables.duracionRondas || ""} onChange={handleEditChange} className="w-full bg-[var(--color-bg)] border border-gray-600 rounded p-1" />
+                        ) : <p className="font-semibold">{torneo.duracionRondas ? `${torneo.duracionRondas} min` : "N/A"}</p>}
                     </div>
                 </div>
 
@@ -416,8 +544,31 @@ export default function TorneoDetalle() {
                 </div>
 
                 {modoEdicion && (
+                    <div className="mt-8 pt-6 border-t border-red-900/50 mb-8">
+                        <h3 className="text-red-500 font-bold mb-2">Zona de Peligro</h3>
+                        <div className="flex justify-between items-center bg-red-900/10 border border-red-900/30 p-4 rounded-lg">
+                            <div>
+                                <p className="text-red-400 font-bold">Cancelar Torneo</p>
+                                <p className="text-xs text-red-300/70">Esta acción cambiará el estado a CANCELADO y no se podrá revertir.</p>
+                            </div>
+                            <button 
+                                onClick={() => setMostrarConfirmacionCancelar(true)} 
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition"
+                            >
+                                Cancelar Torneo
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {modoEdicion && (
                     <div className="flex flex-col items-center gap-2 mb-8">
-                        {mensajeEdicion && <p className="text-red-400 text-sm">{mensajeEdicion}</p>}
+                        {mensajeEdicion && (
+                            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg text-sm text-center max-w-lg mx-auto mb-4">
+                                ⚠️ {mensajeEdicion}
+                            </div>
+                        )}
+                        
                         <div className="flex gap-4">
                             <button
                                 onClick={cancelarEdicion}
@@ -451,6 +602,23 @@ export default function TorneoDetalle() {
                             <div className="flex justify-center gap-4">
                                 <button onClick={() => setMostrarConfirmacion(false)} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 text-white">Cancelar</button>
                                 <button onClick={handleInscripcion} className="px-4 py-2 bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-secondary)] text-white font-bold">Confirmar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {mostrarConfirmacionCancelar && (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-red-500">
+                            <h2 className="text-2xl font-bold mb-4 text-red-500">¿Cancelar Torneo?</h2>
+                            <p className="mb-6 text-gray-300 text-sm">
+                                Esta acción es <strong>irreversible</strong>. El torneo pasará a estado CANCELADO y no se podrá volver a abrir ni editar.
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button onClick={() => setMostrarConfirmacionCancelar(false)} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 text-white transition">Volver</button>
+                                <button onClick={cancelarTorneo} disabled={procesandoEdicion} className="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 text-white font-bold transition">
+                                    {procesandoEdicion ? "Procesando..." : "Sí, Cancelar"}
+                                </button>
                             </div>
                         </div>
                     </div>
